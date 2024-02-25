@@ -168,3 +168,10 @@ $RECYCLE.BIN/
 
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
+
+src/data/all_documents
+src/data/Regulatory Statute Documents Set 3
+src/data/Regulatory Statute Documents Set 2
+src/data/Regulatory Statute Documents Set 1
+src/data/all_files.parquet
+src/test.ipynb
