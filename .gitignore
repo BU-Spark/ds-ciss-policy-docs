@@ -169,6 +169,12 @@ $RECYCLE.BIN/
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
+/data/
+node_modules/
+*.db
+*.log
+*.sqlite
+
 src/data/all_documents
 src/data/Regulatory Statute Documents Set 3
 src/data/Regulatory Statute Documents Set 2
