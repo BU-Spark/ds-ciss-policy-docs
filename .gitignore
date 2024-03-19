@@ -174,3 +174,12 @@ node_modules/
 *.db
 *.log
 *.sqlite
+
+src/data/all_documents
+src/data/Regulatory Statute Documents Set 3
+src/data/Regulatory Statute Documents Set 2
+src/data/Regulatory Statute Documents Set 1
+src/data/all_files.parquet
+src/test.ipynb
+src/data/text_data.parquet
+src/data/dara_error_log.txt
