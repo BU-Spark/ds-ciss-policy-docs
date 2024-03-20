@@ -45,9 +45,11 @@ def get_l2(l1):
     }
     return mapping[l1]
     
-                
-                
-                
-            
+def encode_df(df, col):
+    '''
+    encode data in one column of a dataframe into utf-8
+    '''
+    df['text'] = df[col].apply(lambda x: x.decode('utf-8')) 
+    return df
             
     

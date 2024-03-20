@@ -173,5 +173,7 @@ src/data/all_documents
 src/data/Regulatory Statute Documents Set 3
 src/data/Regulatory Statute Documents Set 2
 src/data/Regulatory Statute Documents Set 1
-src/data/all_files.parquet
 src/data/text_data.parquet
+src/data/policies-0318.db.bkp.db
+src/data/Mapping.csv
+src/offload_folder
