@@ -171,6 +171,7 @@ $RECYCLE.BIN/
 
 /data/*/
 node_modules/
+*.zip
 *.db
 *.log
 *.sqlite
