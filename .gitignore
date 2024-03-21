@@ -171,8 +171,8 @@ $RECYCLE.BIN/
 
 src/data/all_documents
 src/data/规范性文件1
-src/data/规范性文件1
-src/data/规范性文件1
+src/data/规范性文件2
+src/data/规范性文件3
 src/data/text_data.parquet
 src/data/policies-0318.db.bkp.db
 src/data/Mapping.csv
