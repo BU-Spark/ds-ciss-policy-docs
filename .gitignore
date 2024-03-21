@@ -169,6 +169,8 @@ $RECYCLE.BIN/
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
+origin/*
+
 src/data/all_documents
 src/data/规范性文件1
 src/data/规范性文件2
@@ -177,3 +179,37 @@ src/data/text_data.parquet
 src/data/policies-0318.db.bkp.db
 src/data/Mapping.csv
 src/offload_folder
+src/offload_folder/*
+
+
+data/AnHui
+data/BeiJing
+data/ChongQing
+data/FuJian
+data/GanSu
+data/GuangDong
+data/GuangXi
+data/GuiZhou
+data/HaiNan
+data/HeBei
+data/HeiLongJiang
+data/HeNan
+data/HuBei
+data/HuNan
+data/JiangSu
+data/JiangXi
+data/JiLin
+data/LiaoNing
+data/NeiMeng
+data/NingXia
+data/QingHai
+data/ShaanXi
+data/ShanDong
+data/ShangHai
+data/ShanXi
+data/SiChuan
+data/TianJin
+data/XinJiang
+data/XiZang
+data/YunNan
+data/ZheJiang
