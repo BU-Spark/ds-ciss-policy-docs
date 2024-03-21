@@ -1,7 +1,13 @@
-# TEMPLATE-base-repo
+# CISS Internship - Chinese Policy Documents Project Description
 
-Create a new branch from dev, add changes on the new branch you just created.
-
-Open a Pull Request to dev. Add your PM and TPM as reviewers. 
-
-At the end of the semester during project wrap up open a final Pull Request to main from dev branch.
+## File Structure
+```
+repo/
+  ├─ analysis/
+  ├─ data/
+  ├─ notebook/
+  ├─ origin/
+  └─ src/
+```
+- `data/` contains the script that prepare the raw documents. It also stores the generated raw documents. See [data/](data/) for more details.
+- `origin/` stores the unprocessed data files. See [data/](data/).
