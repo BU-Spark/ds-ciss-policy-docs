@@ -160,12 +160,12 @@ def generate_label_data(df_path, db_path):
     df_text['id'] = id_list
     df_text_label = df_text.merge(df_label, on='id', how='inner')
     
-    return df_text_label
+    return df_text_label, df_text, df_label
 
 def main():
-    raw_file_root1 = "data/Regulatory Statute Documents Set 1"
-    raw_file_root2 = "data/Regulatory Statute Documents Set 2"
-    raw_file_root3 = "data/Regulatory Statute Documents Set 3"
+    raw_file_root1 = "data/规范性文件1"
+    raw_file_root2 = "data/规范性文件2"
+    raw_file_root3 = "data/规范性文件3"
     output_dir = "data/text_data.parquet"
     
     data_pipeline([raw_file_root1, raw_file_root2, raw_file_root3], output_dir)
