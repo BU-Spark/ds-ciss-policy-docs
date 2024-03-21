@@ -18,17 +18,18 @@ def convertSubFolder(sub):
         dirOut = "ShaanXi"
     else:
         dirOut = ''.join(s.capitalize() for s in pinyin(sub[:formatIndex], style=0, errors='replace'))
-    yearOut = sub[formatIndex+5:] if len(dir) - dir.index("规范性文件") - 5 > 0 else ""
+    yearOut = sub[formatIndex+5:] if len(sub) - formatIndex - 5 > 0 else ""
     return yearOut.isnumeric(), dirOut, yearOut
 
 def main():
 
     import subprocess
-    subprocess.run(["unzip", "-O", "CP936", "-o", "*.zip", "-d", "./origin/"], cwd=cwd, stdout=subprocess.DEVNULL)
+    # subprocess.run(["unzip", "-O", "CP936", "-o", "*.zip", "-d", "./origin/"], cwd=cwd, stdout=subprocess.DEVNULL)
+    # assume sets in data/origin/
     _, sets, _ = next(os.walk(os.path.join(cwd, "origin")))
     print(sets)
 
-    # unzip all files
+    # walk through all folders
     for set in sets:
         dirs = next(os.walk(os.path.join(cwd, "origin", set)))[1]
         for dir in dirs:
@@ -37,7 +38,13 @@ def main():
                 isSub, dirOut, yearOut = convertSubFolder(year)
                 if isSub:
                     print(dirOut, yearOut)
-                    checkFolderExist("data", dirOut, yearOut)
+                    checkFolderExist(dirOut, yearOut)
+                    dirFrom = os.path.join(cwd, "origin", set, dir, year)
+                    dirDest = os.path.join(cwd, dirOut, yearOut)
+                    subprocess.run(["unzip", "-O", "CP936", "-o", "*.zip", "-d", dirDest], cwd=dirFrom, stdout=subprocess.DEVNULL)
+                    subprocess.run(["node", "analysis/ajax/manage.js", "add", dirOut, yearOut], cwd=os.path.join(cwd, ".."))
+                    # subprocess.run(["rm", "-f", "*.zip"], cwd=dirUnzip)
+
     return
 
 if __name__ == "__main__":
