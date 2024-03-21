@@ -18,7 +18,7 @@
 
         python data/unzip.py
 
-    \* If progress management is not required at the moment or lacking dependencies, comment out **line 50** in [unzip.py](./unzip.py).
+    \* If progress management is not required or lack NodeJS dependencies, comment out **line 50** in [unzip.py](./unzip.py).
 
 ## File Structure
 After running [unzip.py](./unzip.py), you should see something like this:
