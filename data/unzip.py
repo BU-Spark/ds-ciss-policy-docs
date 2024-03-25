@@ -48,7 +48,8 @@ def main():
                     subprocess.run(["unzip", "-O", "CP936", "-n", "*.zip", "-d", dirDest], cwd=dirFrom, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
                     # add to database
                     subprocess.run(["node", "analysis/ajax/manage.js", "add", dirOut, yearOut], cwd=os.path.join(cwd, ".."))
-                    # check for any embedded folders
+                    # check for any txt file or embedded folder
+                    subprocess.run("mv *.txt " + dirDest + '/', shell=True, cwd=os.path.join(dirFrom))
                     dirsEmbedded = next(os.walk(dirFrom))[1]
                     for dirEmbedded in dirsEmbedded:
                         subprocess.run("mv *.txt " + dirDest + '/', shell=True, cwd=os.path.join(dirFrom, dirEmbedded))
