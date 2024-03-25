@@ -5,15 +5,29 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const db = require('better-sqlite3')(path.join(__dirname, './policies.db'));
 
-const sqlQueryPolicy = db.prepare('SELECT filename, type FROM category WHERE id=?;');
-const sqlInsertPolicy = db.prepare('INSERT OR IGNORE INTO category VALUES(?,?,?,?,?,?);');
+const sqlQueryPolicy = db.prepare('SELECT filename, type FROM category WHERE id=? and area=? and year=?;');
+const sqlInsertPolicy = db.prepare('INSERT OR IGNORE INTO category VALUES(?,?,?,?,?,?,?);');
+
+const syncToCsv = false;
+
+async function writeToStream(stream, str) {
+    if(syncToCsv) {
+        stream.write(str);
+    }
+}
+
+async function logWithTime(...args) {
+    console.log(new Date().toISOString().slice(0,-5), ...args)
+}
 
 // async function collectData(folder) {
 async function collectData(jArea, jYear) {
     const dir = path.join(__dirname, '../../data/', jArea, ""+jYear);
     await fsPromise.readdir(dir).then(async files => {
-        const resultStream = fs.createWriteStream('./category.csv');
-        resultStream.write('id,filename,url,type\n');
+        if(syncToCsv) {
+            const resultStream = fs.createWriteStream('./category.csv');
+            writeToStream(resultStream, 'id,filename,url,type,dt\n');
+        }
         const urlReg = /https:\/\/www\.pkulaw\.com\/lar\/\w+\.html/;
         for(file of files) {
             const data = fs.readFileSync(path.join(dir, file), 'utf-8');
@@ -28,7 +42,7 @@ async function collectData(jArea, jYear) {
                     }
                 }
             }
-            const policy = sqlQueryPolicy.get(id);
+            const policy = sqlQueryPolicy.get(id, jArea, jYear);
             if(policy != undefined && policy.filename === file && isNaN(policy.type.split('-')[0])) {
                 continue;
             }
@@ -41,23 +55,23 @@ async function collectData(jArea, jYear) {
                         await axios.get(urls[0]).then(res => {
                             const $ = cheerio.load(res.data);
                             const fields = $('.fields');
-                            const li = fields.find('li:contains("法规类别")');
-                            const type = li.find('a').text();
-                            sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], type);
-                            resultStream.write(`${id},${dir+file},${urls[0]},${type}\n`);
+                            const type = fields.find('li:contains("法规类别")').find('a').text();
+                            const dt = fields.find('li:contains("公布日期")').find('div').text().replace("公布日期：", "");
+                            sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], type, dt);
+                            writeToStream(resultStream, `${id},${dir+file},${urls[0]},${type}\n`);
                         }).catch(err => {
                             // check status code
                             if(err.response.status === 404) {
-                                sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], '404-NotFound');
-                                resultStream.write(`${id},${dir+file},${urls[0]},404-NotFound\n`);
+                                logWithTime('ERROR: 404 on', jArea, jYear, file);
+                                sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], '404-NotFound', '');
+                                writeToStream(resultStream, `${id},${dir+file},${urls[0]},404-NotFound,\n`);
                             } else {
-                                console.log(err.response);
-                                sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], `${err.response.status}-Unknown`);
-                                resultStream.write(`${id},${dir+file},${urls[0]},${err.response.status}-Unknown\n`);
+                                logWithTime('ERROR:', err);
+                                sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], `${err.response.status}-Unknown`, '');
+                                writeToStream(resultStream, `${id},${dir+file},${urls[0]},${err.response.status}-Unknown,\n`);
                             }
                         });
                         reqTime = Date.now() - now;
-                        console.log(`Request Time: ${reqTime}ms`);
                     }
                 }
                 await new Promise(resolve => setTimeout(resolve, Math.max(20, Math.ceil(400 - (reqTime / 2)))));
@@ -65,17 +79,26 @@ async function collectData(jArea, jYear) {
         }
     });
 }
+
 async function main() {
-    const jobs = db.prepare('SELECT area, year FROM folder WHERE status=1;').all();
-    const jQueued = db.prepare('SELECT area, year FROM folder WHERE status=0;').all();
-    jobs.push(...jQueued);
-    console.log('Jobs:', jobs);
-    for(const job of jobs) {
+    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=1;');
+    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=0;');
+    let job = sqlJobPending.get();
+    if(!job) {
+        job = sqlJobQueued.get();
+    }
+    do {
         db.prepare('UPDATE folder SET status=1 WHERE area=? AND year=?;').run(job.area, job.year);
+        logWithTime('WIP:', job, '1');
         await collectData(job.area, job.year);
         db.prepare('UPDATE folder SET status=2 WHERE area=? AND year=?;').run(job.area, job.year);
-        console.log('Complete Job:', job.area, job.year);
-    }
+        logWithTime('Done:', job);
+        job = sqlJobPending.get();
+        if(!job) {
+            job = sqlJobQueued.get();
+        }
+    } while(job);
+    logWithTime("EXIT LOOP");
 }
 
 main();
