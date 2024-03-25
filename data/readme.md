@@ -2,7 +2,7 @@
 
 ## Getting Started
 1.  Prepare
-    1.  Manually download zip file(s) from Google Drive.  
+    1.  Manually download zip file(s) from Google Drive; **or run origin/download.py** to download the data.
     2.  Unzip them, and put all sets in `repo/origin/` as shown below.  
 
             repo/origin/
