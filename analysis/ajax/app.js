@@ -24,8 +24,10 @@ async function logWithTime(...args) {
 async function collectData(jArea, jYear) {
     const dir = path.join(__dirname, '../../data/', jArea, ""+jYear);
     await fsPromise.readdir(dir).then(async files => {
-        const resultStream = fs.createWriteStream('./category.csv');
-        writeToStream(resultStream, 'id,filename,url,type,dt\n');
+        if(syncToCsv) {
+            const resultStream = fs.createWriteStream('./category.csv');
+            writeToStream(resultStream, 'id,filename,url,type,dt\n');
+        }
         const urlReg = /https:\/\/www\.pkulaw\.com\/lar\/\w+\.html/;
         for(file of files) {
             const data = fs.readFileSync(path.join(dir, file), 'utf-8');
@@ -60,10 +62,11 @@ async function collectData(jArea, jYear) {
                         }).catch(err => {
                             // check status code
                             if(err.response.status === 404) {
+                                logWithTime('ERROR: 404 on', jArea, jYear, file);
                                 sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], '404-NotFound', '');
                                 writeToStream(resultStream, `${id},${dir+file},${urls[0]},404-NotFound,\n`);
                             } else {
-                                logWithTime(err.response);
+                                logWithTime('ERROR:', err);
                                 sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], `${err.response.status}-Unknown`, '');
                                 writeToStream(resultStream, `${id},${dir+file},${urls[0]},${err.response.status}-Unknown,\n`);
                             }
@@ -86,10 +89,10 @@ async function main() {
     }
     do {
         db.prepare('UPDATE folder SET status=1 WHERE area=? AND year=?;').run(job.area, job.year);
-        logWithTime('WIP: ', job);
+        logWithTime('WIP:', job, '1');
         await collectData(job.area, job.year);
         db.prepare('UPDATE folder SET status=2 WHERE area=? AND year=?;').run(job.area, job.year);
-        logWithTime('Complete Job:', job.area, job.year);
+        logWithTime('Done:', job);
         job = sqlJobPending.get();
         if(!job) {
             job = sqlJobQueued.get();
