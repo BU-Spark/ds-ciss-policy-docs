@@ -15,7 +15,7 @@ def checkFolderExist(l1, l2=None):
 def convertSubFolder(sub):
     if sub.startswith("北京"):
         dirOut = 'BeiJing'
-        yearOut = sub[-4:]
+        yearOut = sub[2:6]
         return yearOut.isnumeric(), dirOut, yearOut
     formatIndex = sub.index("规范性文件")
     dirOut = ""
@@ -46,7 +46,7 @@ def main():
                     # unzip files in a directory
                     subprocess.run(["unzip", "-O", "CP936", "-n", "*.zip", "-d", dirDest], cwd=dirFrom, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
                     # add to database
-                    subprocess.run(["node", "analysis/ajax/manage.js", "add", dirOut, yearOut], cwd=os.path.join(cwd, ".."))
+                    subprocess.run(["node", "task-b/collect/manage.js", "add", dirOut, yearOut], cwd=os.path.join(cwd, ".."))
                     # check for any txt file or embedded folder
                     subprocess.run("mv *.txt " + dirDest + '/', shell=True, cwd=os.path.join(dirFrom), stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
                     dirsEmbedded = next(os.walk(dirFrom))[1]
