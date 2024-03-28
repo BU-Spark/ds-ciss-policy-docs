@@ -143,9 +143,9 @@ async function collectData(jArea, jYear) {
 }
 
 async function main() {
-    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=21;');
-    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=20;');
-    const sqlSetPending = db.prepare('UPDATE folder SET status=21 WHERE area=? AND year=?;');
+    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=11;');
+    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=10;');
+    const sqlSetPending = db.prepare('UPDATE folder SET status=11 WHERE area=? AND year=?;');
     const sqlSetQueued = db.prepare('UPDATE folder SET status=2 WHERE area=? AND year=?;');
     const sqlEmptyCount = db.prepare(`SELECT COUNT(CASE type WHEN '' THEN 1 ELSE NULL END) AS no_type, COUNT(CASE dt WHEN '' THEN 1 ELSE NULL END) AS no_dt, COUNT(1) AS count_all FROM category WHERE area=? AND year=?;`);
     let job = sqlJobPending.get();
