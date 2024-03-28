@@ -5,7 +5,7 @@ const fsPromise = require('node:fs/promises');
 const axios = require('axios');
 const ProxyAgent = require('https-proxy-agent').HttpsProxyAgent;
 const cheerio = require('cheerio');
-const db = require('better-sqlite3')(path.join(__dirname, './policies.db'));
+const db = require('better-sqlite3')(path.join(__dirname, 'policies.db'));
 
 const config = require(path.join(__dirname, 'config'));
 
@@ -31,16 +31,16 @@ async function collectData(jArea, jYear) {
     await fsPromise.readdir(dir).then(async files => {
         let resultStream, docsDoneCount=0;
         const reqDurations = [], reqRetryCounts = [];
+        const urlReg = /https:\/\/www\.pkulaw\.com\/lar\/\w+\.html/;
         if(syncToCsv) {
             resultStream = fs.createWriteStream('./category.csv');
             writeToStream(resultStream, 'id,filename,url,type,dt\n');
         }
-        const urlReg = /https:\/\/www\.pkulaw\.com\/lar\/\w+\.html/;
         for(file of files) {
             if(Date.now() - lastLogTime > 20*60*1000) {
-                const avgDuration = Math.round(reqDurations.reduce((a,b)=>a+b)/reqDurations.length);
-                const avgRetryCount = Math.round(reqDurations.reduce((a,b)=>a+b)/reqDurations.length);
-                logWithTime(`WIP: ${jArea} ${jYear} Complete ${docsDoneCount}/${files.length} AvgDuration ${avgDuration} AvgRetry `);
+                const avgDuration = Math.round(reqDurations.reduce((a,b)=>a+b)/reqDurations.length/10)/100.0;
+                const avgRetryCount = Math.round(reqRetryCounts.reduce((a,b)=>a+b)/reqRetryCounts.length*100)/100.0;
+                logWithTime(`WIP: ${jArea} ${jYear} Complete ${docsDoneCount}/${files.length} AvgDuration ${avgDuration} AvgRetry ${avgRetryCount}`);
                 lastLogTime = Date.now();
             }
             const data = fs.readFileSync(path.join(dir, file), 'utf-8');
@@ -56,7 +56,7 @@ async function collectData(jArea, jYear) {
                 }
             }
             const policy = sqlQueryPolicy.get(id, jArea, jYear);
-            if(policy && policy.filename && policy.filename === file && policy.type.split('-').length < 2) {
+            if(policy && policy.filename && policy.filename === file && policy.type.length > 0 && policy.type !== '999-Unknown') {
                 docsDoneCount += 1;
                 continue;
             }
@@ -68,9 +68,11 @@ async function collectData(jArea, jYear) {
                 if(urls.length <= 0) {
                     continue;
                 }
-                let reqDuration = 0, reqRetry = false, reqRetryCount = 0;
+                let reqDuration, reqRetry, reqRetryCount = 0;
                 const now = Date.now();
                 do {
+                    reqDuration = 0
+                    reqRetry = false;
                     reqRetryCount += 1;
                     await axios.get(urls[0], {
                         proxy: false,
@@ -81,6 +83,11 @@ async function collectData(jArea, jYear) {
                         const types = [];
                         for(const e of fields.find('li:contains("法规类别")').find('a')) {
                             types.push($(e).text());
+                        }
+                        if(types.length === 0) {
+                            for(const e of fields.find('li:contains("专题分类")').find('a')) {
+                                types.push($(e).text());
+                            }
                         }
                         const dt = fields.find('li:contains("公布日期")').find('div').text().replace("公布日期：", "");
                         if(types.length === 0 || dt.length === 0) {
@@ -106,9 +113,10 @@ async function collectData(jArea, jYear) {
                             sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], `567-ReqFreq`, '');
                             writeToStream(resultStream, `${id},${dir+file},${urls[0]},567-ReqFreq,\n`);
                             reqRetry = true;
+                            await new Promise(resolve => setTimeout(resolve, 60*1000));
                         } else if (errCode === 502) {
                             reqRetry = true;
-                        } else if(err.message.trim().toLowerCase() === 'proxy connection ended before receiving connect response') {
+                        } else if(axios.isAxiosError(err)) {
                             reqRetry = true;
                         } else {
                             logWithTime('ERROR: Unknow Error', err);
@@ -116,15 +124,15 @@ async function collectData(jArea, jYear) {
                             writeToStream(resultStream, `${id},${dir+file},${urls[0]},${errCode}-Unknown,\n`);
                         }
                     });
-                    if(reqRetryCount > 4) {
+                    if(reqRetryCount > 8) {
                         logWithTime('ERROR: too many fails', jArea, jYear, file);
                         reqRetry = false;
                     } else if(reqRetry) {
-                        await new Promise(resolve => setTimeout(resolve, 400));
+                        await new Promise(resolve => setTimeout(resolve, reqRetryCount > 6 ? 4000 : 800));
                     }
+                    reqDuration = Date.now() - now;
+                    reqDurations.push(reqDuration);
                 } while(reqRetry);
-                reqDuration = Date.now() - now;
-                reqDurations.push(reqDuration);
                 reqRetryCounts.push(reqRetryCount);
                 break;
             }
@@ -136,18 +144,22 @@ async function collectData(jArea, jYear) {
 async function main() {
     const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=11;');
     const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=10;');
+    const sqlSetPending = db.prepare('UPDATE folder SET status=11 WHERE area=? AND year=?;');
+    const sqlSetQueued = db.prepare('UPDATE folder SET status=2 WHERE area=? AND year=?;');
+    const sqlEmptyCount = db.prepare(`SELECT COUNT(CASE type WHEN '' THEN 1 ELSE NULL END) AS no_type, COUNT(CASE dt WHEN '' THEN 1 ELSE NULL END) AS no_dt, COUNT(1) AS count_all FROM category WHERE area=? AND year=?;`);
     let job = sqlJobPending.get();
-    if(!job) {
+    if(!(job && job.area && job.year)) {
         job = sqlJobQueued.get();
     }
     while(job) {
-        db.prepare('UPDATE folder SET status=1 WHERE area=? AND year=?;').run(job.area, job.year);
-        logWithTime('Start:', job);
+        sqlSetPending.run(job.area, job.year);
+        logWithTime(`Start: ${job.area} ${job.year}`);
         await collectData(job.area, job.year);
-        db.prepare('UPDATE folder SET status=2 WHERE area=? AND year=?;').run(job.area, job.year);
-        logWithTime('Done:', job);
+        sqlSetQueued.run(job.area, job.year);
+        const postReport = sqlEmptyCount.get(job.area, job.year);
+        logWithTime(`Done: ${job.area} ${job.year} missing values: { type: ${postReport.no_type}/${postReport.count_all}, dt: ${postReport.no_dt}/${postReport.count_all} }`);
         job = sqlJobPending.get();
-        if(!job) {
+        if(!(job && job.area && job.year)) {
             job = sqlJobQueued.get();
         }
     }
