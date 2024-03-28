@@ -9,6 +9,7 @@ const db = require('better-sqlite3')(path.join(__dirname, 'policies.db'));
 
 const config = require(path.join(__dirname, 'config'));
 
+const proxyMain = new ProxyAgent(`http://${config.proxyIp}:${config.proxyPort}`);
 const sqlQueryPolicy = db.prepare('SELECT filename, type FROM category WHERE id=? and area=? and year=?;');
 const sqlInsertPolicy = db.prepare('INSERT OR IGNORE INTO category VALUES(?,?,?,?,?,?,?);');
 
@@ -76,7 +77,7 @@ async function collectData(jArea, jYear) {
                     reqRetryCount += 1;
                     await axios.get(urls[0], {
                         proxy: false,
-                        httpsAgent: new ProxyAgent(`http://${config.proxyIp}:${config.proxyPort}`),
+                        httpsAgent: proxyMain,
                     }).then(res => {
                         const $ = cheerio.load(res.data);
                         const fields = $('#body1').find('.fields');
@@ -142,9 +143,9 @@ async function collectData(jArea, jYear) {
 }
 
 async function main() {
-    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=11;');
-    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=10;');
-    const sqlSetPending = db.prepare('UPDATE folder SET status=11 WHERE area=? AND year=?;');
+    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=21;');
+    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=20;');
+    const sqlSetPending = db.prepare('UPDATE folder SET status=21 WHERE area=? AND year=?;');
     const sqlSetQueued = db.prepare('UPDATE folder SET status=2 WHERE area=? AND year=?;');
     const sqlEmptyCount = db.prepare(`SELECT COUNT(CASE type WHEN '' THEN 1 ELSE NULL END) AS no_type, COUNT(CASE dt WHEN '' THEN 1 ELSE NULL END) AS no_dt, COUNT(1) AS count_all FROM category WHERE area=? AND year=?;`);
     let job = sqlJobPending.get();
