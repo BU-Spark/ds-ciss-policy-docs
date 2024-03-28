@@ -56,7 +56,7 @@ async function collectData(jArea, jYear) {
                 }
             }
             const policy = sqlQueryPolicy.get(id, jArea, jYear);
-            if(policy && policy.filename && policy.filename === file && policy.type.split('-').length < 2) {
+            if(policy && policy.filename && policy.filename === file && policy.type !== '') {
                 docsDoneCount += 1;
                 continue;
             }
@@ -108,7 +108,7 @@ async function collectData(jArea, jYear) {
                             reqRetry = true;
                         } else if (errCode === 502) {
                             reqRetry = true;
-                        } else if(err.message.trim().toLowerCase() === 'proxy connection ended before receiving connect response') {
+                        } else if(axios.isAxiosError(err)) {
                             reqRetry = true;
                         } else {
                             logWithTime('ERROR: Unknow Error', err);
@@ -116,11 +116,11 @@ async function collectData(jArea, jYear) {
                             writeToStream(resultStream, `${id},${dir+file},${urls[0]},${errCode}-Unknown,\n`);
                         }
                     });
-                    if(reqRetryCount > 4) {
+                    if(reqRetryCount > 8) {
                         logWithTime('ERROR: too many fails', jArea, jYear, file);
                         reqRetry = false;
                     } else if(reqRetry) {
-                        await new Promise(resolve => setTimeout(resolve, 400));
+                        await new Promise(resolve => setTimeout(resolve, reqRetryCount * 800));
                     }
                 } while(reqRetry);
                 reqDuration = Date.now() - now;
