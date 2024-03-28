@@ -56,7 +56,7 @@ async function collectData(jArea, jYear) {
                 }
             }
             const policy = sqlQueryPolicy.get(id, jArea, jYear);
-            if(policy && policy.filename && policy.filename === file && policy.type !== '') {
+            if(policy && policy.filename && policy.filename === file && policy.type.split('-').length < 2) {
                 docsDoneCount += 1;
                 continue;
             }
@@ -108,7 +108,7 @@ async function collectData(jArea, jYear) {
                             reqRetry = true;
                         } else if (errCode === 502) {
                             reqRetry = true;
-                        } else if(axios.isAxiosError(err)) {
+                        } else if(err.message.trim().toLowerCase() === 'proxy connection ended before receiving connect response') {
                             reqRetry = true;
                         } else {
                             logWithTime('ERROR: Unknow Error', err);
@@ -116,11 +116,11 @@ async function collectData(jArea, jYear) {
                             writeToStream(resultStream, `${id},${dir+file},${urls[0]},${errCode}-Unknown,\n`);
                         }
                     });
-                    if(reqRetryCount > 8) {
+                    if(reqRetryCount > 4) {
                         logWithTime('ERROR: too many fails', jArea, jYear, file);
                         reqRetry = false;
                     } else if(reqRetry) {
-                        await new Promise(resolve => setTimeout(resolve, reqRetryCount * 800));
+                        await new Promise(resolve => setTimeout(resolve, 400));
                     }
                 } while(reqRetry);
                 reqDuration = Date.now() - now;
@@ -134,8 +134,8 @@ async function collectData(jArea, jYear) {
 }
 
 async function main() {
-    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=1;');
-    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=0;');
+    const sqlJobPending = db.prepare('SELECT area, year FROM folder WHERE status=11;');
+    const sqlJobQueued = db.prepare('SELECT area, year FROM folder WHERE status=10;');
     let job = sqlJobPending.get();
     if(!job) {
         job = sqlJobQueued.get();
