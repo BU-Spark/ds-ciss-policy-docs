@@ -12,12 +12,14 @@ db.exec(createTableFolder);
 
 const createTableCate = `
     CREATE TABLE IF NOT EXISTS category(
-        id STRING UNIQUE PRIMARY KEY,
+        id STRING,
         area STRING,
         year INTEGER,
         filename STRING,
         url STRING,
-        type STRING
+        type STRING,
+        dt STRING,
+        UNIQUE(id, area, year) ON CONFLICT IGNORE
     );`;
 db.exec(createTableCate);
 
