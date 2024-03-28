@@ -175,9 +175,8 @@ node_modules/
 *.db
 *.log
 *.sqlite
-origin/规范性文件1
-origin/规范性文件2
-origin/规范性文件3
+origin/*/
+/task-b/collect/config.js
 
 src/data/*
 src/offload_folder/*
