@@ -9,6 +9,7 @@ const db = require('better-sqlite3')(path.join(__dirname, 'policies.db'));
 
 const config = require(path.join(__dirname, 'config'));
 
+const proxyMain = new ProxyAgent(`http://${config.proxyIp}:${config.proxyPort}`);
 const sqlQueryPolicy = db.prepare('SELECT filename, type FROM category WHERE id=? and area=? and year=?;');
 const sqlInsertPolicy = db.prepare('INSERT OR IGNORE INTO category VALUES(?,?,?,?,?,?,?);');
 
@@ -76,7 +77,7 @@ async function collectData(jArea, jYear) {
                     reqRetryCount += 1;
                     await axios.get(urls[0], {
                         proxy: false,
-                        httpsAgent: new ProxyAgent(`http://${config.proxyIp}:${config.proxyPort}`),
+                        httpsAgent: proxyMain,
                     }).then(res => {
                         const $ = cheerio.load(res.data);
                         const fields = $('#body1').find('.fields');
@@ -157,7 +158,7 @@ async function main() {
         await collectData(job.area, job.year);
         sqlSetQueued.run(job.area, job.year);
         const postReport = sqlEmptyCount.get(job.area, job.year);
-        logWithTime(`Done: ${job.area} ${job.year} missing values: { type: ${postReport.no_type}/${postReport.count_all}, dt: ${postReport.no_dt}/${postReport.count_all} }`);
+        logWithTime(`Done: ${job.area} ${job.year} missing values: { type: ${postReport.no_type}/${postReport.count_all}, dt: ${postReport.no_dt}/${postReport.count_all} }\n`);
         job = sqlJobPending.get();
         if(!(job && job.area && job.year)) {
             job = sqlJobQueued.get();

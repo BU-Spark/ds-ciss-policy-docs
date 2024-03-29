@@ -158,7 +158,7 @@ async function main() {
         await collectData(job.area, job.year);
         sqlSetQueued.run(job.area, job.year);
         const postReport = sqlEmptyCount.get(job.area, job.year);
-        logWithTime(`Done: ${job.area} ${job.year} missing values: { type: ${postReport.no_type}/${postReport.count_all}, dt: ${postReport.no_dt}/${postReport.count_all} }`);
+        logWithTime(`Done: ${job.area} ${job.year} missing values: { type: ${postReport.no_type}/${postReport.count_all}, dt: ${postReport.no_dt}/${postReport.count_all} }\n`);
         job = sqlJobPending.get();
         if(!(job && job.area && job.year)) {
             job = sqlJobQueued.get();
