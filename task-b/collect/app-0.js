@@ -13,7 +13,7 @@ const proxyMain = new ProxyAgent(`http://${config.proxyIp}:${config.proxyPort}`)
 const sqlQueryPolicy = db.prepare('SELECT filename, type FROM category WHERE id=? and area=? and year=?;');
 const sqlInsertPolicy = db.prepare('INSERT OR IGNORE INTO category VALUES(?,?,?,?,?,?,?);');
 
-const syncToCsv = false;
+const syncToCsv = false, debug = false;
 
 async function writeToStream(stream, str) {
     if(syncToCsv) {
@@ -21,8 +21,14 @@ async function writeToStream(stream, str) {
     }
 }
 
+async function debugWithTime(...args) {
+    if(debug) {
+        console.log(new Date().toISOString().slice(0,-5), ...args);
+    }
+}
+
 async function logWithTime(...args) {
-    console.log(new Date().toISOString().slice(0,-5), ...args)
+    console.log(new Date().toISOString().slice(0,-5), ...args);
 }
 
 // async function collectData(folder) {
@@ -30,7 +36,7 @@ async function collectData(jArea, jYear) {
     let lastLogTime = Date.now();
     const dir = path.join(__dirname, '../../data/', jArea, ""+jYear);
     await fsPromise.readdir(dir).then(async files => {
-        let resultStream, docsDoneCount=0;
+        let resultStream, docsDoneCount=0, skipCount=0;
         const reqDurations = [], reqRetryCounts = [];
         const urlReg = /https:\/\/www\.pkulaw\.com\/lar\/\w+\.html/;
         if(syncToCsv) {
@@ -59,7 +65,11 @@ async function collectData(jArea, jYear) {
             const policy = sqlQueryPolicy.get(id, jArea, jYear);
             if(policy && policy.filename && policy.filename === file && policy.type.length > 0 && policy.type !== '999-Unknown') {
                 docsDoneCount += 1;
+                skipCount += 1;
                 continue;
+            } else if(skipCount > 0) {
+                logWithTime(`skipped ${skipCount} files`);
+                skipCount = 0;
             }
             for(const line of lines) {
                 if(!line.includes('原文链接')) {
@@ -69,15 +79,18 @@ async function collectData(jArea, jYear) {
                 if(urls.length <= 0) {
                     continue;
                 }
-                let reqDuration, reqRetry, reqRetryCount = 0;
-                const now = Date.now();
+                let now, reqRetry, reqRetryCount = 0;
                 do {
-                    reqDuration = 0
+                    now = Date.now()
                     reqRetry = false;
                     reqRetryCount += 1;
-                    await axios.get(urls[0], {
-                        proxy: false,
-                        httpsAgent: proxyMain,
+                    debugWithTime(`TEST: ${file} req ${reqRetryCount}`);
+                    await new Promise(async (resolve, reject) => {
+                        setTimeout(() => reject('manual timeout'), 8000);
+                        axios.get(urls[0], {
+                            proxy: false,
+                            httpsAgent: proxyMain,
+                        }).then(res => resolve(res)).catch(err => reject(err));
                     }).then(res => {
                         const $ = cheerio.load(res.data);
                         const fields = $('#body1').find('.fields');
@@ -99,6 +112,7 @@ async function collectData(jArea, jYear) {
                             }
                         }
                         if(!reqRetry) {
+                            debugWithTime('TEST:', file, Date.now() - now, reqRetryCount);
                             sqlInsertPolicy.run(id, jArea, jYear, file, urls[0], types.join(','), dt);
                             writeToStream(resultStream, `${id},${dir+file},${urls[0]},${types.join(',')}\n`);
                         }
@@ -117,7 +131,7 @@ async function collectData(jArea, jYear) {
                             await new Promise(resolve => setTimeout(resolve, 60*1000));
                         } else if (errCode === 502) {
                             reqRetry = true;
-                        } else if(axios.isAxiosError(err)) {
+                        } else if(axios.isAxiosError(err) || err === 'manual timeout') {
                             reqRetry = true;
                         } else {
                             logWithTime('ERROR: Unknow Error', err);
@@ -129,10 +143,9 @@ async function collectData(jArea, jYear) {
                         logWithTime('ERROR: too many fails', jArea, jYear, file);
                         reqRetry = false;
                     } else if(reqRetry) {
-                        await new Promise(resolve => setTimeout(resolve, reqRetryCount > 6 ? 4000 : 800));
+                        await new Promise(resolve => setTimeout(resolve, reqRetryCount > 6 ? (reqRetryCount-6) * 4000 : 400));
                     }
-                    reqDuration = Date.now() - now;
-                    reqDurations.push(reqDuration);
+                    reqDurations.push(Date.now() - now);
                 } while(reqRetry);
                 reqRetryCounts.push(reqRetryCount);
                 break;
