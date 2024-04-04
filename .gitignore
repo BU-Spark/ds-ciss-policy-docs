@@ -180,3 +180,5 @@ origin/*/
 
 src/data/*
 src/offload_folder/*
+
+offload_folder/*
