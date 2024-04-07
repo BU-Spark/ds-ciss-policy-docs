@@ -38,8 +38,53 @@ def find_权宜处理_rule_base(docs):
         
     return list(matched_paragraphs), matched_paragraphs_index
 
-def find_执行过程规定(docs):
+def find_执行过程规定_rule_base(docs):
     pass
     
-def find_一般政策语言(docs):
-    pass
+    
+def find_一般政策语言_rule_base(docs):
+    logging.getLogger().setLevel(logging.ERROR)
+    
+    rule_1_keywords =["(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范"]
+    rule_1_pattern = re.compile('|'.join(rule_1_keywords))
+    rule_1_keywords_fuzzy = ["根据","现提出","提出如下","提出以下","现将","现就"]
+    
+    rule_2_keywords = ["胡锦涛", "温家宝", "习近平", "李克强", "党中央", "国务院"]
+    
+    rule_3_keyword_fuzzy = ["总则"]
+    
+    rule_4_keywords_fuzzy = ["指导思想", "基本原则"]
+    
+    paragraphs = pre_process(docs)
+    matched_paragraphs = set()
+    for paragraph in paragraphs:
+        if rule_1_pattern.search(paragraph):
+            matched_paragraphs.add(paragraph.strip())
+            print("Found rule 1 keyword re")
+            print(paragraph)
+            # print base on whihc keyword
+            print(rule_1_pattern.search(paragraph).group())
+            
+        elif process.extractOne(paragraph, rule_1_keywords_fuzzy)[1] > 70:
+            matched_paragraphs.add(paragraph.strip())
+        elif any(keyword in paragraph for keyword in rule_2_keywords):
+            matched_paragraphs.add(paragraph.strip())
+        elif process.extractOne(paragraph, rule_3_keyword_fuzzy)[1] > 70:
+            matched_paragraphs.add(paragraph.strip())
+        elif process.extractOne(paragraph, rule_4_keywords_fuzzy)[1] > 70:
+            matched_paragraphs.add(paragraph.strip())
+        else:
+            continue
+    
+    if len(matched_paragraphs) == 0:
+        print("No matched information found, using default rule")
+        pass
+        
+    
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence)
+        end_index = begin_index + len(sentence)
+        matched_paragraphs_index.append((begin_index, end_index))
+        
+    return list(matched_paragraphs), matched_paragraphs_index
