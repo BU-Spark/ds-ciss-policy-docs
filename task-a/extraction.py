@@ -38,14 +38,46 @@ def find_权宜处理_rule_base(docs):
         
     return list(matched_paragraphs), matched_paragraphs_index
 
-def find_执行过程规定_rule_base(docs):
-    pass
+def find_执行过程规定_rule_base(docs,一般政策语言):
+    logging.getLogger().setLevel(logging.ERROR)
+    
+    keywords =["(以|用|通过).*?(的方式|方法)","由.*?(主要负责|负责)"]
+    pattern = re.compile('|'.join(keywords))
+    
+    keywords_fuzzy = ["流程","程序","执行","分工","牵头","责任","措施","个阶段","进度"]
+    
+    paragraphs = pre_process(docs)
+    matched_paragraphs = set()
+    
+    for paragraph in paragraphs:
+        if paragraph in 一般政策语言:
+            continue
+        if pattern.search(paragraph):
+            matched_paragraphs.add(paragraph.strip())
+        else:
+            best_match = process.extractOne(paragraph, keywords_fuzzy)
+            if best_match[1] > 70:
+                matched_paragraphs.add(paragraph.strip())
+                
+    # find the first and the last index of the matched paragraph
+    first_index = 1000000
+    last_index = 0
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence)
+        end_index = begin_index + len(sentence)
+        matched_paragraphs_index.append((begin_index, end_index))
+        first_index = min(first_index, begin_index)
+        last_index = max(last_index, end_index)
+        
+    return list(matched_paragraphs), matched_paragraphs_index, first_index, last_index, last_index - first_index
+    
     
     
 def find_一般政策语言_rule_base(docs):
     logging.getLogger().setLevel(logging.ERROR)
     
-    rule_1_keywords =["(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范"]
+    rule_1_keywords =["(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范","(?:^|,)\s*为了规范"]
     rule_1_pattern = re.compile('|'.join(rule_1_keywords))
     rule_1_keywords_fuzzy = ["根据","现提出","提出如下","提出以下","现将","现就"]
     
@@ -60,11 +92,6 @@ def find_一般政策语言_rule_base(docs):
     for paragraph in paragraphs:
         if rule_1_pattern.search(paragraph):
             matched_paragraphs.add(paragraph.strip())
-            print("Found rule 1 keyword re")
-            print(paragraph)
-            # print base on whihc keyword
-            print(rule_1_pattern.search(paragraph).group())
-            
         elif process.extractOne(paragraph, rule_1_keywords_fuzzy)[1] > 70:
             matched_paragraphs.add(paragraph.strip())
         elif any(keyword in paragraph for keyword in rule_2_keywords):
