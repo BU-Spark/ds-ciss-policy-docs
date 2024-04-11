@@ -1,7 +1,8 @@
 from thefuzz import process
+from fuzzywuzzy import fuzz
 import logging
 import re
-from utils import pre_process
+from utils import pre_process, pre_process_without_n
 import openai
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
@@ -9,6 +10,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
+from transformers import AutoTokenizer, AutoModelForMaskedLM
 
 def __format_docs(docs):
     """
@@ -80,12 +82,12 @@ def get_answer_RegQA(docs, system_prompt, hint, example, question, feature_name,
     
     return rag_chain.invoke(question)
 
-def find_权宜处理_rule_base(docs):
+def find_权宜处理_rule_base(docs,一般政策性内容):
     """Return the sentence that match 权宜处理 keywords using regular expression and fuzzy matching
 
     Returns:
-        list of string: the all sentences that match 权宜处理 keywords
-        list of tuple: the index of the matched sentences in the original text
+        list of tuple: the all sentences that match 权宜处理 keywords and the matched keywords
+        list of tuple: the index of the matched sentences in the original text and the matched keywords
     """
     logging.getLogger().setLevel(logging.ERROR)
     
@@ -94,28 +96,40 @@ def find_权宜处理_rule_base(docs):
     pattern = re.compile('|'.join(keywords))
     
     # keywords for fuzzy matching
-    keywords_fuzzy = keywords = ["结合实际", "根据实际", "根据实际情况", "结合实际情况", "权宜", "结合本地实际", "根据本地实际","因地制宜"]
+    keywords_fuzzy = ["结合实际", "根据实际", "根据实际情况", "结合实际情况", "权宜", "结合本地实际", "根据本地实际","因地制宜"]
     
     paragraphs = pre_process(docs)
     
     matched_paragraphs = set()
+
     for paragraph in paragraphs:
-        if pattern.search(paragraph):
-            matched_paragraphs.add(paragraph.strip())
+        if paragraph in 一般政策性内容:
+            continue
+        elif pattern.search(paragraph):
+            matched_paragraphs.add((paragraph.strip(), pattern.search(paragraph).group()))
         else:
             best_match = process.extractOne(paragraph, keywords_fuzzy)
-            if best_match[1] > 70:  
-                matched_paragraphs.add(paragraph.strip())
+            if best_match[1] >= 60:  
+                matched_paragraphs.add((paragraph.strip(), best_match[0]))
 
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
-        begin_index = docs.find(sentence)
-        end_index = begin_index + len(sentence)
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
         matched_paragraphs_index.append((begin_index, end_index))
         
     return list(matched_paragraphs), matched_paragraphs_index
 
 def find_执行过程规定_rule_base(docs,一般政策语言):
+    """Return the sentence that match 执行过程规定 keywords using regular expression and fuzzy matching
+
+    Returns:
+        list of tuple: the begin and end sentences that match 执行过程规定 keywords and the matched keywords
+        list of tuple: the index of the matched sentences in the original text
+        list of string: the content that within the begin and end sentences
+        int: the first index of the matched content
+        int: the last index of the matched content
+    """
     logging.getLogger().setLevel(logging.ERROR)
     
     keywords =["(以|用|通过).*?(的方式|方法)","由.*?(主要负责|负责)"]
@@ -130,34 +144,47 @@ def find_执行过程规定_rule_base(docs,一般政策语言):
         if paragraph in 一般政策语言:
             continue
         if pattern.search(paragraph):
-            matched_paragraphs.add(paragraph.strip())
+            matched_paragraphs.add((paragraph.strip(), pattern.search(paragraph).group()))
         else:
             best_match = process.extractOne(paragraph, keywords_fuzzy)
-            if best_match[1] > 70:
-                matched_paragraphs.add(paragraph.strip())
+            if best_match[1] >= 60:
+                matched_paragraphs.add((paragraph.strip(), best_match[0]))
                 
     # find the first and the last index of the matched paragraph
     first_index = 1000000
     last_index = 0
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
-        begin_index = docs.find(sentence)
-        end_index = begin_index + len(sentence)
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
         matched_paragraphs_index.append((begin_index, end_index))
         first_index = min(first_index, begin_index)
         last_index = max(last_index, end_index)
         
+    # include all content within the first and the last index
+    content = docs[first_index:last_index]
+    content = pre_process(content)
+    for paragraph in content:
+        if paragraph in 一般政策语言:
+            content.remove(paragraph)
+        
     if last_index - first_index < 100 or len(matched_paragraphs) == 0 or last_index - first_index > 0.7 * len(docs):
-        return [], [], 0, 0, 0
+        return [], [], None, 0, 0, 0
     else:
-        return list(matched_paragraphs), matched_paragraphs_index, first_index, last_index, last_index - first_index
+        return list(matched_paragraphs), matched_paragraphs_index, content, first_index, last_index, last_index - first_index
     
 def find_一般政策语言_rule_base(docs):
+    """Return the sentence that match 一般政策语言 keywords using regular expression and fuzzy matching
+
+    Returns:
+        list of tuple: the all sentences that match 一般政策语言 keywords and the matched keywords
+        list of tuple: the index of the matched sentences in the original text
+    """
     logging.getLogger().setLevel(logging.ERROR)
     
-    rule_1_keywords =["(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范","(?:^|,)\s*为了规范"]
+    rule_1_keywords =["(?:^|,)\s*根据","(?:^|,)\s*现将","(?:^|,)\s*现就","(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范","(?:^|,)\s*为了规范"]
     rule_1_pattern = re.compile('|'.join(rule_1_keywords))
-    rule_1_keywords_fuzzy = ["根据","现提出","提出如下","提出以下","现将","现就"]
+    rule_1_keywords_fuzzy = ["现提出","提出如下","提出以下"]
     
     rule_2_keywords = ["胡锦涛", "温家宝", "习近平", "李克强", "党中央", "国务院"]
     
@@ -169,15 +196,15 @@ def find_一般政策语言_rule_base(docs):
     matched_paragraphs = set()
     for paragraph in paragraphs:
         if rule_1_pattern.search(paragraph):
-            matched_paragraphs.add(paragraph.strip())
-        elif process.extractOne(paragraph, rule_1_keywords_fuzzy)[1] > 70:
-            matched_paragraphs.add(paragraph.strip())
+            matched_paragraphs.add((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
+        elif (process.extractOne(paragraph, rule_1_keywords_fuzzy)[1] >= 60):
+            matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, rule_1_keywords_fuzzy)[0]))
         elif any(keyword in paragraph for keyword in rule_2_keywords):
-            matched_paragraphs.add(paragraph.strip())
-        elif process.extractOne(paragraph, rule_3_keyword_fuzzy)[1] > 70:
-            matched_paragraphs.add(paragraph.strip())
-        elif process.extractOne(paragraph, rule_4_keywords_fuzzy)[1] > 70:
-            matched_paragraphs.add(paragraph.strip())
+            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_2_keywords if keyword in paragraph][0]))
+        elif (process.extractOne(paragraph, rule_3_keyword_fuzzy)[1] >= 60):
+            matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, rule_3_keyword_fuzzy)[0]))
+        elif (process.extractOne(paragraph, rule_4_keywords_fuzzy)[1] >= 60):
+            matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, rule_4_keywords_fuzzy)[0]))
         else:
             continue
     
@@ -188,8 +215,118 @@ def find_一般政策语言_rule_base(docs):
     
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
-        begin_index = docs.find(sentence)
-        end_index = begin_index + len(sentence)
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
         matched_paragraphs_index.append((begin_index, end_index))
         
     return list(matched_paragraphs), matched_paragraphs_index
+
+def find_设置特定目标_rule_base(docs, 一般政策语言):
+    logging.getLogger().setLevel(logging.ERROR)
+    
+    keywords = [
+        "(?:^|,)\s*第.*?(章|节|点|条).*?(目标|工作目标|工作重点|发展目标|明确目标|重点目标|重要目标|目标任务|任务|重点任务|主要任务|具体要求|工作要求|主要要求)"
+    ]
+    rule_1_pattern = re.compile('|'.join(keywords))
+    
+    rule_2_keyword_fuzzy = ["总则"]
+    
+    rule_3_keyword_fuzzy = ["实现","达到","解决","确保","保证","保障"]
+    rule_3_pattern = ["推动.*?目标", "在.*?方面实行"]
+    rule_3_pattern = re.compile('|'.join(rule_3_pattern))
+    
+    paragraphs = pre_process_without_n(docs)
+    matched_paragraphs = set()
+    for paragraph in paragraphs:
+        for sentence in 一般政策语言:
+            if sentence[0] in paragraph:
+                continue
+        if rule_1_pattern.search(paragraph):
+            matched_paragraphs.add((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
+        elif any(keyword in paragraph for keyword in rule_2_keyword_fuzzy):
+            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_2_keyword_fuzzy if keyword in paragraph][0]))
+        elif rule_3_pattern.search(paragraph):
+            matched_paragraphs.add((paragraph.strip(), rule_3_pattern.search(paragraph).group()))
+        else:
+            best_match = process.extractOne(paragraph, rule_3_keyword_fuzzy)
+            if best_match[1] >= 60:
+                matched_paragraphs.add((paragraph.strip(), best_match[0]))
+                
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
+        matched_paragraphs_index.append((begin_index, end_index))
+        
+    return list(matched_paragraphs), matched_paragraphs_index
+
+def find_设置特定期限_rule_base(docs):
+    logging.getLogger().setLevel(logging.ERROR)
+    
+    keywords = [
+        "(?:^|,)\s*本办法自.*?有效期",
+        "(在|于)(年|月|日)前",
+        "为期","巡查时期","时间进度","个工作日内","个月内","年内"
+    ]
+    
+    pattern = re.compile('|'.join(keywords))
+    paragraphs = pre_process(docs)
+    matched_paragraphs = set()
+    
+    for paragraph in paragraphs:
+        if pattern.search(paragraph):
+            matched_paragraphs.add((paragraph.strip(), pattern.search(paragraph).group()))
+        else:
+            continue
+        
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
+        matched_paragraphs_index.append((begin_index, end_index))
+        
+    return list(matched_paragraphs), matched_paragraphs_index
+
+def find_评估标准_rule_base(docs):
+    logging.getLogger().setLevel(logging.ERROR)
+    
+    keywords = [
+        "(?:^|,)\s*第.*?(章|节|点|条).*?(绩效检查|监督检查|监督管理|监督|绩效|评估|评价|考核|自评)"
+    ]
+    pattern = re.compile('|'.join(keywords))
+    
+    keywords_fuzzy = ["责任追究","追究机制","尽职免责","自评","巡查","领导巡查","提交报告","监督","检查"]
+    
+    paragraphs = pre_process(docs)
+    
+    matched_paragraphs = set()
+    for paragraph in paragraphs:
+        if pattern.search(paragraph):
+            matched_paragraphs.add((paragraph.strip(), pattern.search(paragraph).group()))
+        else:
+            if process.extractOne(paragraph, keywords_fuzzy)[1] >= 60:
+                matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, keywords_fuzzy)[0]))
+
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
+        matched_paragraphs_index.append((begin_index, end_index))
+        
+    return list(matched_paragraphs), matched_paragraphs_index
+
+def 评估标准详细度_summurize(评估标准):
+    评估标准 = [p[0] for p in 评估标准]
+    评估标准_str = "\n".join(评估标准)
+    
+    # load bert chinese model
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-chinese")
+    model = AutoModelForMaskedLM.from_pretrained("bert-base-chinese")
+    
+    prompt = f"请根据以下内容用一个短语总结评估标准的详细度，例如：由上级负责解释，5条规定，提交报告等。以下是评估标准全文: {评估标准_str}"
+    input_ids = tokenizer(prompt, return_tensors="pt")["input_ids"]
+    output = model.generate(input_ids, max_length=20, num_return_sequences=1, no_repeat_ngram_size=2, temperature=0.1)
+    return tokenizer.decode(output[0], skip_special_tokens=True)
+    
+    
+    
