@@ -1,5 +1,4 @@
 from thefuzz import process
-from fuzzywuzzy import fuzz
 import logging
 import re
 from utils import pre_process, pre_process_without_n
@@ -82,6 +81,57 @@ def get_answer_RegQA(docs, system_prompt, hint, example, question, feature_name,
     
     return rag_chain.invoke(question)
 
+def find_一般政策语言_rule_base(docs):
+    """Return the sentence that match 一般政策语言 keywords using regular expression and fuzzy matching
+
+    Returns:
+        list of tuple: the all sentences that match 一般政策语言 keywords and the matched keywords
+        list of tuple: the index of the matched sentences in the original text
+    """
+    logging.getLogger().setLevel(logging.ERROR)
+    
+    rule_1_keywords =["(?:^|,)\s*现将","(?:^|,)\s*现就","现.*如下","(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范","(?:^|,)\s*为了e规范"]
+    rule_1_pattern = re.compile('|'.join(rule_1_keywords))
+    rule_1_keywords_fuzzy = ["现提出","提出如下","提出以下"]
+    
+    rule_2_keywords = ["胡锦涛", "温家宝", "习近平", "李克强", "党中央", "国务院"]
+    
+    rule_3_keyword = ["总则"]
+    
+    rule_4_keywords = ["指导思想", "基本原则"]
+    
+    paragraphs = pre_process(docs)
+    matched_paragraphs = set()
+    for paragraph in paragraphs:
+        if rule_1_pattern.search(paragraph):
+            matched_paragraphs.add((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
+        elif any(keyword in paragraph for keyword in rule_1_keywords_fuzzy):
+            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_1_keywords_fuzzy if keyword in paragraph][0]))
+        elif any(keyword in paragraph for keyword in rule_2_keywords):
+            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_2_keywords if keyword in paragraph][0]))
+        elif any(keyword in paragraph for keyword in rule_3_keyword):
+            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_3_keyword if keyword in paragraph][0]))
+        elif any(keyword in paragraph for keyword in rule_4_keywords):
+            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_4_keywords if keyword in paragraph][0]))
+        else:
+            continue
+    
+    if len(matched_paragraphs) == 0:
+        # print("No matched information found, using default rule")
+        # find the first sentence in docs that have \u3000\u3000
+        for paragraph in paragraphs:
+            if "\u3000\u3000" in paragraph:
+                matched_paragraphs.add((paragraph.strip(), "默认规则"))
+                break
+    
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
+        matched_paragraphs_index.append((begin_index, end_index))
+        
+    return list(matched_paragraphs), matched_paragraphs_index
+
 def find_权宜处理_rule_base(docs,一般政策性内容):
     """Return the sentence that match 权宜处理 keywords using regular expression and fuzzy matching
 
@@ -89,6 +139,7 @@ def find_权宜处理_rule_base(docs,一般政策性内容):
         list of tuple: the all sentences that match 权宜处理 keywords and the matched keywords
         list of tuple: the index of the matched sentences in the original text and the matched keywords
     """
+    
     logging.getLogger().setLevel(logging.ERROR)
     
     # keywords for regular expression
@@ -172,55 +223,7 @@ def find_执行过程规定_rule_base(docs,一般政策语言):
         return [], [], None, 0, 0, 0
     else:
         return list(matched_paragraphs), matched_paragraphs_index, content, first_index, last_index, last_index - first_index
-    
-def find_一般政策语言_rule_base(docs):
-    """Return the sentence that match 一般政策语言 keywords using regular expression and fuzzy matching
-
-    Returns:
-        list of tuple: the all sentences that match 一般政策语言 keywords and the matched keywords
-        list of tuple: the index of the matched sentences in the original text
-    """
-    logging.getLogger().setLevel(logging.ERROR)
-    
-    rule_1_keywords =["(?:^|,)\s*根据","(?:^|,)\s*现将","(?:^|,)\s*现就","(?:^|,)\s*为[^,]*?落实","(?:^|,)\s*为[^,]*?贯彻", "(?:^|,)\s*为规范","(?:^|,)\s*为了规范"]
-    rule_1_pattern = re.compile('|'.join(rule_1_keywords))
-    rule_1_keywords_fuzzy = ["现提出","提出如下","提出以下"]
-    
-    rule_2_keywords = ["胡锦涛", "温家宝", "习近平", "李克强", "党中央", "国务院"]
-    
-    rule_3_keyword_fuzzy = ["总则"]
-    
-    rule_4_keywords_fuzzy = ["指导思想", "基本原则"]
-    
-    paragraphs = pre_process(docs)
-    matched_paragraphs = set()
-    for paragraph in paragraphs:
-        if rule_1_pattern.search(paragraph):
-            matched_paragraphs.add((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
-        elif (process.extractOne(paragraph, rule_1_keywords_fuzzy)[1] >= 60):
-            matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, rule_1_keywords_fuzzy)[0]))
-        elif any(keyword in paragraph for keyword in rule_2_keywords):
-            matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_2_keywords if keyword in paragraph][0]))
-        elif (process.extractOne(paragraph, rule_3_keyword_fuzzy)[1] >= 60):
-            matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, rule_3_keyword_fuzzy)[0]))
-        elif (process.extractOne(paragraph, rule_4_keywords_fuzzy)[1] >= 60):
-            matched_paragraphs.add((paragraph.strip(), process.extractOne(paragraph, rule_4_keywords_fuzzy)[0]))
-        else:
-            continue
-    
-    if len(matched_paragraphs) == 0:
-        print("No matched information found, using default rule")
-        pass
-        
-    
-    matched_paragraphs_index = []
-    for sentence in matched_paragraphs:
-        begin_index = docs.find(sentence[0])
-        end_index = begin_index + len(sentence[0])
-        matched_paragraphs_index.append((begin_index, end_index))
-        
-    return list(matched_paragraphs), matched_paragraphs_index
-
+ 
 def find_设置特定目标_rule_base(docs, 一般政策语言):
     logging.getLogger().setLevel(logging.ERROR)
     
@@ -238,9 +241,8 @@ def find_设置特定目标_rule_base(docs, 一般政策语言):
     paragraphs = pre_process_without_n(docs)
     matched_paragraphs = set()
     for paragraph in paragraphs:
-        for sentence in 一般政策语言:
-            if sentence[0] in paragraph:
-                continue
+        if any(sentence[0] in paragraph for sentence in 一般政策语言):
+            continue
         if rule_1_pattern.search(paragraph):
             matched_paragraphs.add((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
         elif any(keyword in paragraph for keyword in rule_2_keyword_fuzzy):
@@ -327,6 +329,4 @@ def 评估标准详细度_summurize(评估标准):
     input_ids = tokenizer(prompt, return_tensors="pt")["input_ids"]
     output = model.generate(input_ids, max_length=20, num_return_sequences=1, no_repeat_ngram_size=2, temperature=0.1)
     return tokenizer.decode(output[0], skip_special_tokens=True)
-    
-    
     
