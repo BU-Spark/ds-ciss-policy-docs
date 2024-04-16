@@ -169,13 +169,14 @@ $RECYCLE.BIN/
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
-data/*/
-node_modules/
 *.zip
 *.db
 *.log
 *.sqlite
+data/*/
+node_modules/
 origin/*/
+/task-a/sample/
 /task-b/collect/config.js
 
 src/data/*
