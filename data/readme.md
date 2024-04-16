@@ -5,7 +5,7 @@
     1.  Manually download zip file(s) from Google Drive; **or run origin/download.py** to download the data.
     2.  Unzip them, and put all sets in `repo/origin/` as shown below.  
 
-            repo/origin/
+            origin/
               ├─ set1/
               ├─ set2/
               └─ set3/
@@ -23,7 +23,7 @@
 ## File Structure
 After running [unzip.py](./unzip.py), you should see something like this:
 ```
-repo/data/
+data/
   ├─ shanghai/
   |  ├─ 2020/
   |  |  ├─ document1.txt
