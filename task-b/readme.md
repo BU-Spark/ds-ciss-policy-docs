@@ -21,26 +21,32 @@ We have developed some scripts to pull the labels from the original website, and
 
 ## File Structure
 ```
-repo/task-b/
+task-b/
   ├─ collect/
   |  ├─ app-x.js
   |  ├─ csv2sqlite.js
+  |  ├─ data_check.js
+  |  ├─ data_check.out
   |  ├─ manage.js
   |  ├─ package-lock.json
   |  ├─ package.json
   |  └─ test.js
+  ├─ mapping.md
   ├─ readme.md
   └─ test-0.ipynb
 ```
 - [collect/app-x.js](collect/app-0.js) is the worker threads that pull labels from the website. 
 - [collect/csv2sqlite.js](collect/csv2sqlite.js) can be ignored; it was used in the early stage to store everything in a csv file into a sqlite database. 
-- [collect/manage.js](collect/manage.js) is the controller that add/remove tasks into/from the database. Each folder with format `region/year/` correspondes to a task in the database. 
-- [collect/package.json](collect/package.json) stores the meta data and dependencies of a nodejs project. 
+- [collect/data_check.js](collect/data_check.js) is a script to check the data quality after pulling. Try `node data_check.js` to see the usage. 
+- [collect/data_check.out](collect/data_check.out) is the result of the latest quality checking. It shows the number of missing values overall and the number of those in each region. 
+- [collect/manage.js](collect/manage.js) is the controller that add/remove tasks into/from the database. Each folder with format `region/year/` correspondes to a task in the database. Run `node manage.js` to see the usage. 
+- [collect/package-lock.json](collect/package-lock.json) and [collect/package.json](collect/package.json) stores the meta data and dependencies of a nodejs project. 
+- [mapping.csv](mapping.csv) stores the latest mapping relationship used to map the original labels into L1 and L2 labels. 
+- [test-0.ipynb](test-0.ipynb) shows some experiments with mapping labels. 
 
 ## Useful Commands
-To start or continue collecting labels:
+To start or continue collecting labels on the background:
 ```
 nohup node task-b/collect/app-0.js >> collect-0.log 2>&1 &
 nohup node task-b/collect/app-1.js >> collect-1.log 2>&1 &
-nohup node task-b/collect/app-2.js >> collect-2.log 2>&1 &
 ```
