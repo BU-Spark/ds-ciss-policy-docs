@@ -178,6 +178,8 @@ node_modules/
 origin/*/
 /task-a/sample/
 /task-b/collect/config.js
+/task-b/*.csv
+!/task-b/mapping.csv
 
 src/data/*
 src/offload_folder/*
