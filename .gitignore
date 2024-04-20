@@ -180,6 +180,7 @@ origin/*/
 /task-b/collect/config.js
 /task-b/*.csv
 !/task-b/mapping.csv
+__pycache__/
 
 src/data/*
 src/offload_folder/*
