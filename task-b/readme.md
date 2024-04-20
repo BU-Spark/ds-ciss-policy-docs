@@ -69,6 +69,8 @@ task-b/
         python utils.py csv region 陕西
         python utils.py csv region XiAn
         python utils.py csv region beijing
+        python utils.py csv type 高等教育
+        python utils.py csv l2 农业
 
 
 ## Useful Commands
