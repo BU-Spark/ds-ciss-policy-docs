@@ -2,3 +2,4 @@ preprocess.py
 test_results.csv
 test_results.xlsx
 data/*
+sample/*
