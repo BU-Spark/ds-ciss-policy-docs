@@ -9,8 +9,9 @@ We also provide get_answer_RegQA() through GPT3.5 to extract the information tha
 
 ## Getting Started
 Install dependiencies (please cd to task-a folder). 
-
-    pip install -r requirements.txt
+```
+pip install -r requirements.txt
+```
 
 ## File Structure
 ```
@@ -30,6 +31,6 @@ task-a/
 
 ## Useful Commands
 To start the test, run the following command:
-
-    python run_test.py
-
+```
+python run_test.py
+```
