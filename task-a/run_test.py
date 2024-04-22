@@ -1,4 +1,4 @@
-from extraction import find_权宜处理_rule_base, find_执行过程规定_rule_base, find_一般政策语言_rule_base, find_设置特定目标_rule_base, find_设置特定期限_rule_base, find_评估标准_rule_base
+from extraction import find_权宜处理_rule_base, find_执行过程规定_rule_base, find_一般政策语言_rule_base, find_设置特定目标_rule_base, find_设置特定期限_rule_base, find_评估标准_rule_base, find_向上级反映_rule_base
 
 import os
 import pandas as pd
@@ -72,10 +72,20 @@ def extract_rule_base(df):
             评估标准_提取原因_list += [评估标准_提取原因]
         df.loc[i, '评估标准'] = "\n".join(评估标准_list)
         df.loc[i, '评估标准_提取原因'] = "\n".join(评估标准_提取原因_list)
+        
+        matched_paragraphs_向上级反映, matched_paragraphs_index = find_向上级反映_rule_base(docs)
+        向上级反馈_list = []
+        向上级反馈_提取原因_list = []
+        for 向上级反馈, 向上级反馈_提取原因 in matched_paragraphs_向上级反映:
+            向上级反馈_list += [向上级反馈]
+            向上级反馈_提取原因_list += [向上级反馈_提取原因]
+        df.loc[i, '向上级反馈'] = "\n".join(向上级反馈_list)
+        df.loc[i, '向上级反馈_提取原因'] = "\n".join(向上级反馈_提取原因_list)
           
     return df
        
 if __name__ == "__main__":
+    
     df = generate_test_data()
     print("Start extracting rule base...")
     begin = time.time()
