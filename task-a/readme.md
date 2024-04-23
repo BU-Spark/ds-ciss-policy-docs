@@ -9,12 +9,13 @@ We also provide get_answer_RegQA() through GPT3.5 to extract the information tha
 
 ## Getting Started
 Install dependiencies (please cd to task-a folder). 
-
-    pip install -r requirements.txt
+```
+pip install -r requirements.txt
+```
 
 ## File Structure
 ```
-repo/task-a/
+task-a/
   ├─ extraction.py
   ├─ run_test.py
   ├─ utils.py
@@ -24,11 +25,12 @@ repo/task-a/
 ```
 - [extraction.py] is the main file that contains the functions to extract the information from the policy documents.
 - [run_test.py] is the file that generate the sample test result and store the result in a csv file. csv file will contain the extracted information and the corresponding reasons.
+- [sample.py](sample.py) is used to take a subset of documents and store them into the `sample/` folder. Run `python sample.py` to see usage.
+- [test-1.ipynb] is the jupyter notebook that can run test on function seperately.
 - [utils.py] is the file that contains the helper functions.
-- [test.ipynb] is the jupyter notebook that can run test on function seperately.
 
 ## Useful Commands
 To start the test, run the following command:
-
-    python run_test.py
-
+```
+python run_test.py
+```
