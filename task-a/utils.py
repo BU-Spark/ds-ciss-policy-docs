@@ -30,3 +30,11 @@ def printWithColor(doc, idxs):
     for idx in idxs:
         doc = f'{doc[:idx[0]]}\033[30;103m{doc[idx[0]:idx[1]+1]}\033[0m{doc[idx[1]+1:]}'
     print(doc)
+
+def standerlize_一般政策性内容(一般政策性内容):
+    if isinstance(一般政策性内容[0], tuple):
+        一般政策性内容 = [re.sub(r'\s+', '', content[0]) for content in 一般政策性内容]
+    else:
+        一般政策性内容 = [re.sub(r'\s+', '', content) for content in 一般政策性内容]
+        
+    return 一般政策性内容
