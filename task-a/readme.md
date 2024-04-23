@@ -16,21 +16,41 @@ pip install -r requirements.txt
 ## File Structure
 ```
 task-a/
+  ├─ sample/
+  │  ├─ doc1.txt
+  │  ├─ doc2.txt
+  │  ├─ ...
+  ├─ notebook/
+  │  ├─ col_7_一般政策语言.ipynb
+  │  ├─ col_16_对政策执行过程有规范.ipynb
+  │  ├─ ...
   ├─ extraction.py
-  ├─ run_test.py
+  ├─ sample.py
+  ├─ batch_process.py
   ├─ utils.py
   ├─ readme.md
-  ├─ requirements.txt
-  └─ test.ipynb
+  └─ requirements.txt
+
 ```
-- [extraction.py] is the main file that contains the functions to extract the information from the policy documents.
-- [run_test.py] is the file that generate the sample test result and store the result in a csv file. csv file will contain the extracted information and the corresponding reasons.
-- [sample.py](sample.py) is used to take a subset of documents and store them into the `sample/` folder. Run `python sample.py` to see usage.
-- [test-1.ipynb] is the jupyter notebook that can run test on function seperately.
-- [utils.py] is the file that contains the helper functions.
+- [data] folder contains the policy documents that we generate using sample.py.
+
+- [notebook] folder contains a set of Jupyter notebooks that demonstrate how to extract information for individual features. Each notebook is named in the format: col_{feature_number}_{feature_name}.ipynb, where feature_number is the number of the feature, and feature_name is the name of the information to be extracted. Please refer to the end of this file (Link To Metadata) for the index number of each feature. For example, col_7_一般政策语言.ipynb is the notebook that illustrates how to extract information for the feature "col_7_一般政策语言". This notebook includes:
+  1. The logic function that extracts information for the feature "col_7_一般政策语言";
+  2. Visualization of the extracted information;
+  3. A batch process to extract "col_7_一般政策语言" for all documents in the sample folder and provide relevant quantitative analysis.
+
+- [extraction.py] is the main file containing all logic functions for extracting information from the policy documents.
+
+- [sample.py] is used to select a subset of documents and store them in the sample/ folder. Run python sample.py to see its usage.
+
+- [batch_process.py] is the file that implements the batch process to extract all features for all documents in the sample folder and outputs the results to a CSV file.
+
+- [utils.py] is the file containing the helper functions.
 
 ## Useful Commands
 To start the test, run the following command:
 ```
 python run_test.py
 ```
+## The Link to Metadata 
+The metadata of the features can be found in the following link: [metadata](https://docs.google.com/spreadsheets/d/1BA7K6bCfNOyvs4MbpB6oiBA6FUjiYcIdMXY926yEIw8/edit?usp=sharing)
