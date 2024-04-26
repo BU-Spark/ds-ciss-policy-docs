@@ -32,6 +32,9 @@ def printWithColor(doc, idxs):
     print(doc)
 
 def standerlize_一般政策性内容(一般政策性内容):
+    if 一般政策性内容 == [] or 一般政策性内容 == [''] or 一般政策性内容 == None:
+        return []
+    
     if isinstance(一般政策性内容[0], tuple):
         一般政策性内容 = [re.sub(r'\s+', '', content[0]) for content in 一般政策性内容]
     else:
