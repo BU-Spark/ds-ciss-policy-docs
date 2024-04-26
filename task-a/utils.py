@@ -18,13 +18,13 @@ def pre_process_without_n(text):
     return paragraphs
 
 def printWithColor(doc, idxs):
-    idxs = sorted(idxs, key=lambda x: x[0])
+    idxs = sorted(idxs, key=lambda x: x[0], reverse=True)
     overlap = True
     while overlap:
         overlap = False
         for i in range(len(idxs)-1, 0, -1):
-            if idxs[i][0] < idxs[i-1][1]:
-                idxs[i-1] = (idxs[i-1][0], idxs[i][1])
+            if idxs[i-1][0] < idxs[i][1]:
+                idxs[i-1] = (idxs[i][0], idxs[i-1][1])
                 idxs.pop(i)
                 overlap = True
     for idx in idxs:
