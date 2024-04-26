@@ -300,6 +300,8 @@ def find_执行过程规定_rule_base(docs,一般政策语言):
         #         matched_paragraphs.add((paragraph.strip(), best_match[0]))
                 
     # find the first and the last index of the matched paragraph
+    '''
+    
     first_index = 1000000
     last_index = 0
     matched_paragraphs_index = []
@@ -322,7 +324,15 @@ def find_执行过程规定_rule_base(docs,一般政策语言):
         return [], [], [], 0, 0, 0
     else:
         return list(matched_paragraphs), matched_paragraphs_index, content, first_index, last_index, last_index - first_index
- 
+ '''
+    matched_paragraphs_index = []
+    for sentence in matched_paragraphs:
+        begin_index = docs.find(sentence[0])
+        end_index = begin_index + len(sentence[0])
+        matched_paragraphs_index.append((begin_index, end_index))
+        
+    return matched_paragraphs, matched_paragraphs_index
+    
 def find_设置特定目标_rule_base(docs, 一般政策语言):
     一般政策语言 = [re.sub(r'\s+', '', content) for content in 一般政策语言]
     
