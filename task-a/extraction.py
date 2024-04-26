@@ -2,7 +2,7 @@ from thefuzz import process
 import cn2an
 import logging
 import re
-from utils import pre_process, pre_process_without_n
+from utils import pre_process, pre_process_without_n, standerlize_一般政策性内容, get_end_word, add_next_sentence
 import openai
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
@@ -223,41 +223,48 @@ def find_一般政策语言_rule_base(docs):
         
     return matched_paragraphs, matched_paragraphs_index
 
-def find_权宜处理_rule_base(docs,一般政策性内容):
-    """Return the sentence that match 权宜处理 keywords using regular expression and fuzzy matching
+def find_权宜处理_rule_base(docs, 一般政策性内容):
+    """
+    Return the sentences that match 权宜处理 keywords using regular expression and fuzzy matching.
 
     Returns:
-        list of tuple: the all sentences that match 权宜处理 keywords and the matched keywords
-        list of tuple: the index of the matched sentences in the original text and the matched keywords
+        list of tuple: The sentences that match 权宜处理 keywords and the matched keywords.
+        list of tuple: The index of the matched sentences in the original text and the matched keywords.
     """
-    # preprocess the 一般政策性内容 to remove any blank space
-    一般政策性内容 = [re.sub(r'\s+', '', content) for content in 一般政策性内容]
-    
+    # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
     
-    # keywords for regular expression
-    keywords = ["结合.*?实际", "根据.*?实际", "根据实际情况", "结合实际情况", "结合本地实际", "根据本地实际","因地制宜"]
+    # We need to standardize the 一般政策性内容 to avoid any characters at the beginning of the sentence
+    一般政策性内容 = standerlize_一般政策性内容(一般政策性内容)
+    
+    # Define keywords for regular expression
+    keywords = ["结合.*?实际", "根据.*?实际", "因地制宜"]
     pattern = re.compile('|'.join(keywords))
     
-    # keywords for fuzzy matching
+    # Define keywords for fuzzy matching
     keywords_fuzzy = ["结合实际", "根据实际", "根据实际情况", "结合实际情况", "结合本地实际", "根据本地实际"]
     
+    # Preprocess the document to separate it into paragraphs
     paragraphs = pre_process(docs)
-    
+
     matched_paragraphs = []
 
+    # First loop: Search for matches in each paragraph
     for paragraph in paragraphs:
-        # remove any blank space before and after the paragraph
-        check_paragraph = re.sub(r'\s+', '', paragraph)
-        if check_paragraph in 一般政策性内容:
+        # Check if the paragraph is in 一般政策性内容
+        clean_paragraph = re.sub(r'\s+', '', paragraph)
+        if clean_paragraph in 一般政策性内容:
             continue
-        elif pattern.search(paragraph):
-            matched_paragraphs.append((paragraph.strip(), pattern.search(paragraph).group()))
+        
+        match = pattern.search(paragraph)
+        if match:
+            matched_paragraphs.append((paragraph.strip(), match.group()))
         else:
             best_match = process.extractOne(paragraph, keywords_fuzzy)
-            if best_match[1] >= 60:  
+            if  best_match[1] >= 60:
                 matched_paragraphs.append((paragraph.strip(), best_match[0]))
 
+    # Find the indices of matched paragraphs in the original document
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
         begin_index = docs.find(sentence[0])
@@ -266,65 +273,29 @@ def find_权宜处理_rule_base(docs,一般政策性内容):
         
     return matched_paragraphs, matched_paragraphs_index
 
-def find_执行过程规定_rule_base(docs,一般政策语言):
-    """Return the sentence that match 执行过程规定 keywords using regular expression and fuzzy matching
-
-    Returns:
-        list of tuple: the begin and end sentences that match 执行过程规定 keywords and the matched keywords
-        list of tuple: the index of the matched sentences in the original text
-        list of string: the content that within the begin and end sentences
-        int: the first index of the matched content
-        int: the last index of the matched content
-    """
-    一般政策语言 = [re.sub(r'\s+', '', content) for content in 一般政策语言]
-    
+def find_执行过程规定_rule_base(docs,一般政策性内容):
+    # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
     
+    # We need to standardize the 一般政策性内容 to avoid any characters at the beginning of the sentence
+    一般政策性内容 = standerlize_一般政策性内容(一般政策性内容)
+    
+    # Define keywords for regular expression
     keywords =["(以|用|通过).*?(的方式|方法)","由.*?(主要负责|负责)","流程","程序","执行","分工","牵头","责任","措施","个阶段","进度"]
     pattern = re.compile('|'.join(keywords))
-    
-    # keywords_fuzzy = ["流程","程序","执行","分工","牵头","责任","措施","个阶段","进度"]
     
     paragraphs = pre_process(docs)
     matched_paragraphs = set()
     
+    # First loop: Search for matches in each paragraph
     for paragraph in paragraphs:
         check_paragraph = re.sub(r'\s+', '', paragraph)
-        if check_paragraph in 一般政策语言:
+        if check_paragraph in 一般政策性内容:
             continue
         if pattern.search(paragraph):
             matched_paragraphs.add((paragraph.strip(), pattern.search(paragraph).group()))
-        # else:
-        #     best_match = process.extractOne(paragraph, keywords_fuzzy)
-        #     if best_match[1] >= 60:
-        #         matched_paragraphs.add((paragraph.strip(), best_match[0]))
-                
-    # find the first and the last index of the matched paragraph
-    '''
-    
-    first_index = 1000000
-    last_index = 0
-    matched_paragraphs_index = []
-    for sentence in matched_paragraphs:
-        begin_index = docs.find(sentence[0])
-        end_index = begin_index + len(sentence[0])
-        matched_paragraphs_index.append((begin_index, end_index))
-        first_index = min(first_index, begin_index)
-        last_index = max(last_index, end_index)
-        
-    # include all content within the first and the last index
-    content = docs[first_index:last_index]
-    content = pre_process(content)
-    for paragraph in content:
-        check_paragraph = re.sub(r'\s+', '', paragraph)
-        if check_paragraph in 一般政策语言:
-            content.remove(paragraph)
-        
-    if last_index - first_index < 100 or len(matched_paragraphs) == 0 or last_index - first_index > 0.7 * len(docs):
-        return [], [], [], 0, 0, 0
-    else:
-        return list(matched_paragraphs), matched_paragraphs_index, content, first_index, last_index, last_index - first_index
- '''
+
+     # Find the indices of matched paragraphs in the original document
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
         begin_index = docs.find(sentence[0])
@@ -332,7 +303,7 @@ def find_执行过程规定_rule_base(docs,一般政策语言):
         matched_paragraphs_index.append((begin_index, end_index))
         
     return matched_paragraphs, matched_paragraphs_index
-    
+
 def find_设置特定目标_rule_base(docs, 一般政策语言):
     一般政策语言 = [re.sub(r'\s+', '', content) for content in 一般政策语言]
     
@@ -404,58 +375,42 @@ def find_设置特定期限_rule_base(docs):
 def find_评估标准_rule_base(docs):
     logging.getLogger().setLevel(logging.ERROR)
     
-    keywords = [
-        "自评","巡查","监督","检查","追究","考核"
-    ]
+    # We first define the keywords we want to search
+    keywords = ["自评","巡查","监督","检查","追究","考核"]
     pattern = re.compile('|'.join(keywords))
     
+    # We also define the fuzzy keywords we want to search
     keywords_fuzzy = ["责任追究","尽职免责","领导巡查","提交报告"]
     
+    # We define the pattern we want to search for the "章节" information
     keywords_章节 = ["(?:^|,)\s*第.*?(章|节|点|条).*?(绩效检查|监督检查|监督管理|监督|绩效|评估|评价|考核|自评)"]
     pattern_章节 = re.compile('|'.join(keywords_章节))
     
     paragraphs = pre_process(docs)
-    
     matched_paragraphs = []
+    
     i = 0
     while i < len(paragraphs):
+        temp_index = i
         paragraph = paragraphs[i]
+        
+        # if we find the "章节" relative information
         if pattern_章节.search(paragraph):
+            match = pattern_章节.search(paragraph)
             temp = []
             temp += [paragraph]
             
-            # number = ['1','2','3','4','5','6','7','8','9']
             number_pattern = re.compile(r'\d+')
-            
-            # number_chinese = ["一","二","三","四","五","六","七","八","九"]
             number_chinese_pattern = re.compile(r'(?:(?:[一二三四五六七八九]十)?[一二三四五六七八九]|十[一二三四五六七八九]?|二十|三十|四十|五十|六十|七十|八十|九十)')
             
-            end_word = None
-            try:
-                if re.search(number_pattern, paragraph):
-                    number = re.search(number_pattern, paragraph).group()
-                    index = paragraph.index(number)
-
-                    target_number = str(int(number) + 1)
-                    target_number = str(target_number)
-
-                    end_word = target_number + paragraph[index + len(number)]
-                
-                elif number_chinese_pattern.search(paragraph):
-                    number = re.search(number_chinese_pattern, paragraph).group()
-                    index = paragraph.index(number)
-
-                    number_int = cn2an.cn2an(number)
-                    number_int += 1
-                    target_number = cn2an.an2cn(number_int)
-
-                    end_word = target_number + paragraph[index + len(number)]
-            except:
-                pass
+            # In this function, we detect the "章节" information, for example, 第一章
+            end_word = get_end_word(paragraph, number_pattern, number_chinese_pattern)
             
+            # if we successfully find the end word, such as 第二章。Now we will retrieve the content between 第一章 and 第二章
             if end_word:
                 reach_end = True
                 
+                # We first add all the content between 第一章 and 第二章
                 i += 1
                 while i < len(paragraphs) and reach_end:
                     if end_word in paragraphs[i]:
@@ -463,44 +418,30 @@ def find_评估标准_rule_base(docs):
                         break
                     temp += [paragraphs[i]]
                     i += 1
-                    
-                if reach_end == False:
-                    # add list
-                    for index, sentence in enumerate(temp):
-                        if index == 0:
-                            matched_paragraphs.append((sentence, pattern_章节.search(paragraph).group()))
-                        else:
-                            matched_paragraphs.append((sentence, "章节/条款内容"))
-                            
-                else:
-                    temp = [paragraph]
-                    next_index = paragraphs.index(paragraph) + 1
-                    if next_index < len(paragraphs):
-                        temp += [paragraphs[next_index]]
-                        for index, sentence in enumerate(temp):
-                            if index == 0:
-                                matched_paragraphs.append((sentence, pattern_章节.search(paragraph).group()))
-                            else:
-                                matched_paragraphs.append((sentence, "章节/条款内容"))
-                    else:
-                        matched_paragraphs.append((paragraph.strip(), pattern_章节.search(paragraph).group()))
-                    i = next_index
-                    
-            else:
-                temp = [paragraph]
-                next_index = paragraphs.index(paragraph) + 1
-                if next_index < len(paragraphs):
-                    temp += [paragraphs[next_index]]
-                    for index, sentence in enumerate(temp):
-                        if index == 0:
-                            matched_paragraphs.append((sentence, pattern_章节.search(paragraph).group()))
-                        else:
-                            matched_paragraphs.append((sentence, "章节/条款内容"))
-                else:
-                    matched_paragraphs.append((paragraph.strip(), pattern_章节.search(paragraph).group()))
-                i = next_index
                 
-            matched_paragraphs[0] = (matched_paragraphs[0][0], pattern_章节.search(paragraph).group())
+                # If end word is indeed in following paragraphs, we add the content between 第一章 and 第二章
+                if reach_end == False:
+                    for index, sentence in enumerate(temp):
+                        if index == 0:
+                            matched_paragraphs.append((sentence, match.group()))
+                        else:
+                            matched_paragraphs.append((sentence, "章节/条款内容"))
+                
+                # If end word is not in following paragraphs, we add the content between 第一章 and the next sentence
+                else:
+                    next_index = temp_index + 1
+                    matched_paragraphs = add_next_sentence(paragraphs, paragraph, next_index, matched_paragraphs, match, "章节/条款内容")
+                    
+                    # We reset the index to the next sentence index, so we can continue our while loop
+                    i = next_index 
+                    
+            # no end word, we add the content between 第一章 and the next sentence
+            else:
+                next_index = temp_index + 1
+                matched_paragraphs = add_next_sentence(paragraphs, paragraph, next_index, matched_paragraphs, match, "章节/条款内容")
+                
+                # We reset the index to the next sentence index, so we can continue our while loop
+                i = next_index
             
         elif pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), pattern.search(paragraph).group()))
@@ -529,27 +470,32 @@ def 评估标准详细度_summurize(评估标准):
     input_ids = tokenizer(prompt, return_tensors="pt")["input_ids"]
     output = model.generate(input_ids, max_length=20, num_return_sequences=1, no_repeat_ngram_size=2, temperature=0.1)
     return tokenizer.decode(output[0], skip_special_tokens=True)
-    
+
 def find_向上级反映_rule_base(docs):
+    # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
     
+    # Define the keywords pattern
     keywords_章节 = ["(请径向|请向|向).*?(反映|反馈|报告|通报)"]
     pattern = re.compile('|'.join(keywords_章节))
     
+    # Process the document to separate it into paragraphs
     paragraphs = pre_process(docs)
     matched_paragraphs = []
     
+    # First loop: Search for matches in each paragraph
     for paragraph in paragraphs:
-        if pattern.search(paragraph):
-            matched_paragraphs.append((paragraph.strip(), pattern.search(paragraph).group()))
-        else:
-            continue
+        match = pattern.search(paragraph)
+        if match:
+            # Append the stripped paragraph and the match found
+            matched_paragraphs.append((paragraph.strip(), match.group()))
     
+    # Second loop: Find the indices of matched paragraphs in the original document
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
         begin_index = docs.find(sentence[0])
         end_index = begin_index + len(sentence[0])
         matched_paragraphs_index.append((begin_index, end_index))
-        
-    return matched_paragraphs, matched_paragraphs_index    
     
+    return matched_paragraphs, matched_paragraphs_index
+ 
