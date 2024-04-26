@@ -295,7 +295,7 @@ def find_执行过程规定_rule_base(docs,一般政策性内容):
         if pattern.search(paragraph):
             matched_paragraphs.add((paragraph.strip(), pattern.search(paragraph).group()))
 
-     # Find the indices of matched paragraphs in the original document
+    # Find the indices of matched paragraphs in the original document
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
         begin_index = docs.find(sentence[0])
@@ -305,37 +305,34 @@ def find_执行过程规定_rule_base(docs,一般政策性内容):
     return matched_paragraphs, matched_paragraphs_index
 
 def find_设置特定目标_rule_base(docs, 一般政策语言):
-    一般政策语言 = [re.sub(r'\s+', '', content) for content in 一般政策语言]
-    
+     # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
     
+    # We need to standardize the 一般政策性内容 to avoid any characters at the beginning of the sentence
+    一般政策语言 = standerlize_一般政策性内容(一般政策语言)
+
+    # Define keywords for regular expression
     keywords = [
         "(?:^|,)\s*第.*?(章|节|点|条).*?(目标|工作目标|工作重点|发展目标|明确目标|重点目标|重要目标|目标任务|任务|重点任务|主要任务|具体要求|工作要求|主要要求)"
     ]
     rule_1_pattern = re.compile('|'.join(keywords))
-    
-    # rule_2_keyword_fuzzy = ["总则"]
-    
-    # rule_3_keyword_fuzzy = ["实现","达到","解决","确保","保证","保障"]
     rule_3_pattern = ["推动.*?目标", "在.*?方面实行", "总则","实现","达到","解决","确保","保证","保障"]
     rule_3_pattern = re.compile('|'.join(rule_3_pattern))
     
-    paragraphs = pre_process_without_n(docs)
+    paragraphs = pre_process(docs)
     matched_paragraphs = []
+    
+    # First loop: Search for matches in each paragraph
     for paragraph in paragraphs:
-        if any(sentence in paragraph for sentence in 一般政策语言):
+        check_paragraph = re.sub(r'\s+', '', paragraph)
+        if any(sentence in check_paragraph for sentence in 一般政策语言):
             continue
         if rule_1_pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
-        # elif any(keyword in paragraph for keyword in rule_2_keyword_fuzzy):
-        #     matched_paragraphs.add((paragraph.strip(), [keyword for keyword in rule_2_keyword_fuzzy if keyword in paragraph][0]))
         elif rule_3_pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), rule_3_pattern.search(paragraph).group()))
-        # else:
-        #     best_match = process.extractOne(paragraph, rule_3_keyword_fuzzy)
-        #     if best_match[1] >= 60:
-        #         matched_paragraphs.add((paragraph.strip(), best_match[0]))
-                
+    
+    # Find the indices of matched paragraphs in the original document         
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
         begin_index = docs.find(sentence[0])
@@ -345,25 +342,30 @@ def find_设置特定目标_rule_base(docs, 一般政策语言):
     return matched_paragraphs, matched_paragraphs_index
 
 def find_设置特定期限_rule_base(docs):
+    # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
     
+    # Define the keywords pattern
     keywords = [
         "(?:^|,)\s*本办法自.*?有效期",
         "(在|于)(年|月|日)前",
         "(至|到).*?(年|月|日)为止",
         "为期","巡查时期","时间进度","个工作日内","个月内","年内"
     ]
-    
     pattern = re.compile('|'.join(keywords))
+    
+    # Process the document to separate it into paragraphs
     paragraphs = pre_process(docs)
     matched_paragraphs = []
     
+    # First loop: Search for matches in each paragraph
     for paragraph in paragraphs:
         if pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), pattern.search(paragraph).group()))
         else:
             continue
         
+    # Second loop: Find the indices of matched paragraphs in the original document
     matched_paragraphs_index = []
     for sentence in matched_paragraphs:
         begin_index = docs.find(sentence[0])
