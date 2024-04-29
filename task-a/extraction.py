@@ -238,7 +238,7 @@ def find_权宜处理_rule_base(docs, 一般政策性内容):
     一般政策性内容 = standerlize_一般政策性内容(一般政策性内容)
     
     # Define keywords for regular expression
-    keywords = ["结合.*?实际", "根据.*?实际", "因地制宜"]
+    keywords = ["结合.*?实际", "根据.*?实际", "因地制宜","结合实际", "根据实际", "根据实际情况", "结合实际情况", "结合本地实际", "根据本地实际"]
     pattern = re.compile('|'.join(keywords))
     
     # Define keywords for fuzzy matching
@@ -261,7 +261,7 @@ def find_权宜处理_rule_base(docs, 一般政策性内容):
             matched_paragraphs.append((paragraph.strip(), match.group()))
         else:
             best_match = process.extractOne(paragraph, keywords_fuzzy)
-            if  best_match[1] >= 60:
+            if  best_match[1] >= 80:
                 matched_paragraphs.append((paragraph.strip(), best_match[0]))
 
     # Find the indices of matched paragraphs in the original document
@@ -378,7 +378,7 @@ def find_评估标准_rule_base(docs):
     logging.getLogger().setLevel(logging.ERROR)
     
     # We first define the keywords we want to search
-    keywords = ["自评","巡查","监督","检查","追究","考核"]
+    keywords = ["自评","巡查","监督","检查","追究","考核","责任追究","尽职免责","领导巡查","提交报告"]
     pattern = re.compile('|'.join(keywords))
     
     # We also define the fuzzy keywords we want to search
@@ -447,7 +447,7 @@ def find_评估标准_rule_base(docs):
             
         elif pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), pattern.search(paragraph).group()))
-        elif process.extractOne(paragraph, keywords_fuzzy)[1] >= 60:
+        elif process.extractOne(paragraph, keywords_fuzzy)[1] >= 80:
                 matched_paragraphs.append((paragraph.strip(), process.extractOne(paragraph, keywords_fuzzy)[0]))   
             
         i += 1
@@ -500,4 +500,21 @@ def find_向上级反映_rule_base(docs):
         matched_paragraphs_index.append((begin_index, end_index))
     
     return matched_paragraphs, matched_paragraphs_index
- 
+
+def find_政策内容_rule_base(docs):
+    def getTitle(line):
+        if len(line) > 0:
+            return True, line
+        else:
+            return False, ''
+    
+    lines = docs.split('\n')
+    linePrev = ''
+    for line in lines:
+        if linePrev.startswith('原文链接'):
+            success, title = getTitle(line)
+            if success:
+                return title
+            else:
+                continue
+        linePrev = line
