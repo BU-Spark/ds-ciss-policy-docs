@@ -4,3 +4,4 @@ test_results.xlsx
 data/*
 sample/*
 policies_label.csv
+run_batch_results.csv
