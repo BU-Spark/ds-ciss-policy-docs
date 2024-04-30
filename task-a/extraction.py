@@ -103,6 +103,7 @@ def find_一般政策语言_rule_base(docs):
     matched_paragraphs = []
     i = 0
     while i < len(paragraphs):
+        temp_index = i
         paragraph = paragraphs[i]
         if rule_1_pattern.search(paragraph):
             if len(paragraph.strip()) <= 15:
@@ -177,7 +178,7 @@ def find_一般政策语言_rule_base(docs):
                             matched_paragraphs.append((sentence, "总则/指导思想/基本原则内容"))
                 else:
                     temp = [paragraph]
-                    next_index = paragraphs.index(paragraph) + 1
+                    next_index = temp_index + 1
                     if next_index < len(paragraphs):
                         temp += [paragraphs[next_index]]
                         for index, sentence in enumerate(temp):
@@ -186,12 +187,12 @@ def find_一般政策语言_rule_base(docs):
                             else:
                                 matched_paragraphs.append((sentence, "总则/指导思想/基本原则内容"))
                     else:
-                        matched_paragraphs.append((paragraph.strip(), [keyword for keyword in rule_3_keyword if keyword in paragraph][0]))
+                        matched_paragraphs.append((paragraph.strip(), "总则/指导思想/基本原则内容"))
                     i = next_index
                     
             else:
                 temp = [paragraph]
-                next_index = paragraphs.index(paragraph) + 1
+                next_index = temp_index + 1
                 if next_index < len(paragraphs):
                     temp += [paragraphs[next_index]]
                     for index, sentence in enumerate(temp):
@@ -201,7 +202,7 @@ def find_一般政策语言_rule_base(docs):
                             matched_paragraphs.append((sentence, "总则/指导思想/基本原则内容"))
                         
                 else:
-                    matched_paragraphs.append((paragraph.strip(), [keyword for keyword in rule_3_keyword if keyword in paragraph][0]))
+                    matched_paragraphs.append((paragraph.strip(), "总则/指导思想/基本原则内容"))
                 i = next_index
                 
         i += 1
@@ -211,6 +212,8 @@ def find_一般政策语言_rule_base(docs):
         # find the first sentence in docs that have \u3000\u3000
         for paragraph in paragraphs:
             if "\u3000\u3000" in paragraph:
+                if "法宝引证码" in paragraph:
+                    continue
                 if len(paragraph) > 5:
                     matched_paragraphs.append((paragraph.strip(), "默认规则"))
                 break
