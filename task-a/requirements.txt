@@ -7,5 +7,12 @@ torch torchvision torchaudio
 transformers
 langchain
 openai
-
-
+pandas
+sqlite3
+argparse
+cn2an
+random
+subprocess
+sys
+thefuzz
+matplotlib
