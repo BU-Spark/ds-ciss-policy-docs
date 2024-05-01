@@ -6,6 +6,16 @@ import time
 import sqlite3
 import argparse
 
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def __info_retrieve(docs, i, file, conn, need_meta):   
     result_dic = {}
     result_dic['文件名称'] =  str(file)
@@ -210,11 +220,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract policy information from text files.")
     parser.add_argument("path_to_txt", type=str, help="Path to the text file directory")
     parser.add_argument("path_to_db", type=str, help="Path to the database file")
-    parser.add_argument("--need_meta", type=bool, default=False, help="Need metadata (default: False)")
-    parser.add_argument("--all_doc", type=bool, default=False, help="Process all documents (default: False)")
+    parser.add_argument("--need_meta", type=str2bool, default=False, help="Need metadata (default: False)")
+    parser.add_argument("--all_doc", type=str2bool, default=False, help="Process all documents (default: False)")
     
     args = parser.parse_args()
-
+    
     print("Start extracting rule base...")
     begin = time.time()
     result = extract_rule_base(args.path_to_txt, args.path_to_db, args.need_meta, args.all_doc)
@@ -223,7 +233,11 @@ if __name__ == "__main__":
     print("Time used per policy: ", (end_time - begin)/len(result))
 
     # Save the result as CSV
+    
+    
     if args.all_doc:
+        print("Save the result as run_batch_results.csv")
         result.to_csv("run_batch_results.csv", index=False)
     else:
+        print("Save the result as run_batch_results_sample.csv")
         result.to_csv("run_batch_results_sample.csv", index=False)
