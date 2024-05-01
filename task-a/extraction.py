@@ -284,7 +284,7 @@ def find_执行过程规定_rule_base(docs,一般政策性内容):
     一般政策性内容 = standerlize_一般政策性内容(一般政策性内容)
     
     # Define keywords for regular expression
-    keywords =["(以|用|通过).*?(的方式|方法)","由.*?(主要负责|负责)","流程","程序","执行","分工","牵头","责任","措施","个阶段","进度"]
+    keywords =["(以|用|通过).*?(的方式|方法)","由.*?(主要负责|负责)","流程","程序","执行","分工","牵头","(?<!法律)(?<!公司)(?<!法人)(?<!社会)责任","措施","个阶段","进度"]
     pattern = re.compile('|'.join(keywords))
     
     paragraphs = pre_process(docs)
@@ -307,19 +307,20 @@ def find_执行过程规定_rule_base(docs,一般政策性内容):
         
     return matched_paragraphs, matched_paragraphs_index
 
-def find_设置特定目标_rule_base(docs, 一般政策语言):
+def find_设置特定目标_rule_base(docs, 一般政策语言, 执行过程规定):
      # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
     
     # We need to standardize the 一般政策性内容 to avoid any characters at the beginning of the sentence
     一般政策语言 = standerlize_一般政策性内容(一般政策语言)
+    执行过程规定 = standerlize_一般政策性内容(执行过程规定)
 
     # Define keywords for regular expression
     keywords = [
         "(?:^|,)\s*第.*?(章|节|点|条).*?(目标|工作目标|工作重点|发展目标|明确目标|重点目标|重要目标|目标任务|任务|重点任务|主要任务|具体要求|工作要求|主要要求)"
     ]
     rule_1_pattern = re.compile('|'.join(keywords))
-    rule_3_pattern = ["推动.*?目标", "在.*?方面实行", "总则","实现","达到","解决","确保","保证","保障"]
+    rule_3_pattern = ["推动.*?目标", "在.*?方面实行", "总则","实现","达到","解决(?!争议\\b)","确保","保证","保障", "(?<!社会)(?<!住房)(?<!风险)(?<!待遇)保障"]
     rule_3_pattern = re.compile('|'.join(rule_3_pattern))
     
     paragraphs = pre_process(docs)
@@ -328,7 +329,7 @@ def find_设置特定目标_rule_base(docs, 一般政策语言):
     # First loop: Search for matches in each paragraph
     for paragraph in paragraphs:
         check_paragraph = re.sub(r'\s+', '', paragraph)
-        if any(sentence in check_paragraph for sentence in 一般政策语言):
+        if any(sentence in check_paragraph for sentence in 一般政策语言) or any(sentence in check_paragraph for sentence in 执行过程规定):
             continue
         if rule_1_pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), rule_1_pattern.search(paragraph).group()))
@@ -381,7 +382,7 @@ def find_评估标准_rule_base(docs):
     logging.getLogger().setLevel(logging.ERROR)
     
     # We first define the keywords we want to search
-    keywords = ["自评","巡查","监督","检查","追究","考核","责任追究","尽职免责","领导巡查","提交报告"]
+    keywords = ["自评","巡查","监督(?!管理局\\b|局\\b)","检查","追究(?!.*?责任)","考核","责任追究","尽职免责","领导巡查","提交报告"]
     pattern = re.compile('|'.join(keywords))
     
     # We also define the fuzzy keywords we want to search
@@ -390,6 +391,9 @@ def find_评估标准_rule_base(docs):
     # We define the pattern we want to search for the "章节" information
     keywords_章节 = ["(?:^|,)\s*第.*?(章|节|点|条).*?(绩效检查|监督检查|监督管理|监督|绩效|评估|评价|考核|自评)"]
     pattern_章节 = re.compile('|'.join(keywords_章节))
+    
+    number_pattern = re.compile(r'\d+')
+    number_chinese_pattern = re.compile(r'(?:(?:[一二三四五六七八九]十)?[一二三四五六七八九]|十[一二三四五六七八九]?|二十|三十|四十|五十|六十|七十|八十|九十)')
     
     paragraphs = pre_process(docs)
     matched_paragraphs = []
@@ -404,9 +408,6 @@ def find_评估标准_rule_base(docs):
             match = pattern_章节.search(paragraph)
             temp = []
             temp += [paragraph]
-            
-            number_pattern = re.compile(r'\d+')
-            number_chinese_pattern = re.compile(r'(?:(?:[一二三四五六七八九]十)?[一二三四五六七八九]|十[一二三四五六七八九]?|二十|三十|四十|五十|六十|七十|八十|九十)')
             
             # In this function, we detect the "章节" information, for example, 第一章
             end_word = get_end_word(paragraph, number_pattern, number_chinese_pattern)
@@ -450,6 +451,13 @@ def find_评估标准_rule_base(docs):
             
         elif pattern.search(paragraph):
             matched_paragraphs.append((paragraph.strip(), pattern.search(paragraph).group()))
+            if number_pattern.search(paragraph) or number_chinese_pattern.search(paragraph):
+                # append the next sentence
+                next_index = temp_index + 1
+                if next_index < len(paragraphs):
+                    matched_paragraphs.append((paragraphs[next_index], "标题之后新一行"))
+                    i = next_index
+            
         elif process.extractOne(paragraph, keywords_fuzzy)[1] >= 80:
                 matched_paragraphs.append((paragraph.strip(), process.extractOne(paragraph, keywords_fuzzy)[0]))   
             

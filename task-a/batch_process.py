@@ -74,7 +74,7 @@ def __info_retrieve(docs, result_df, i, file, conn, need_meta):
     else:
         result_df.loc[i, '建议权宜处理'] = "是"
     
-    matched_paragraphs_设置特定目标, matched_paragraphs_index = find_设置特定目标_rule_base(docs, 一般政策语言_list)
+    matched_paragraphs_设置特定目标, matched_paragraphs_index = find_设置特定目标_rule_base(docs, 一般政策语言_list, 执行过程规定_list)
     设置特定目标_list = []
     设置特定目标_提取原因_list = []
     for 设置特定目标, 设置特定目标_提取原因 in matched_paragraphs_设置特定目标:
@@ -177,9 +177,8 @@ def extract_rule_base(path_to_txt, path_to_db, need_meta, all_doc):
                 print(f"Skip {i+1}/{len(files)}: {file}")
                 continue
             
-            if (i + 1) % 1000 == 0:
-                    print(f"Processing {i+1}/{len(files)}: {file}")
-                    print(f"Current process speed: {(time.time() - begin)/(i+1)} seconds per policy file")
+            
+            print(f"Processing {i+1}/{len(files)}: {file}")
             
             docs = open(os.path.join(path_to_txt, file), 'r',errors='ignore').read()
             try:
@@ -211,4 +210,7 @@ if __name__ == "__main__":
     print("Time used per policy: ", (end_time - begin)/len(result))
 
     # Save the result as CSV
-    result.to_csv("run_batch_results.csv", index=False)
+    if args.all_doc:
+        result.to_csv("run_batch_results.csv", index=False)
+    else:
+        result.to_csv("run_batch_results_sample.csv", index=False)
