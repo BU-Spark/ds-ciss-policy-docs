@@ -3,3 +3,6 @@ test_results.csv
 test_results.xlsx
 data/*
 sample/*
+policies_label.csv
+run_batch_results.csv
+run_batch_results_sample.csv

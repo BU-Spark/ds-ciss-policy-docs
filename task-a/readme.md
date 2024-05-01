@@ -15,21 +15,24 @@ pip install -r requirements.txt
 
 ## File Structure
 ```
-task-a/
-  ├─ sample/
-  │  ├─ doc1.txt
-  │  ├─ doc2.txt
-  │  ├─ ...
-  ├─ notebook/
-  │  ├─ col_7_一般政策语言.ipynb
-  │  ├─ col_16_对政策执行过程有规范.ipynb
-  │  ├─ ...
-  ├─ extraction.py
-  ├─ sample.py
-  ├─ batch_process.py
-  ├─ utils.py
-  ├─ readme.md
-  └─ requirements.txt
+repo/
+    ├─ data
+    ├─ task-a/
+        ├─ sample/
+        │  ├─ doc1.txt
+        │  ├─ doc2.txt
+        │  ├─ ...
+        ├─ notebook/
+        │  ├─ col_7_一般政策语言.ipynb
+        │  ├─ col_16_对政策执行过程有规范.ipynb
+        │  ├─ ...
+        ├─ extraction.py
+        ├─ sample.py
+        ├─ batch_process.py
+        ├─ utils.py
+        ├─ readme.md
+        └─ requirements.txt
+      
 
 ```
 - [data] folder contains the policy documents that we generate using sample.py.
@@ -52,5 +55,35 @@ To start the test, run the following command:
 ```
 python run_test.py
 ```
+
+We can run batch_process.py on either the sample data or the full data. Please download db file from google drive.
+```
+python batch_process.py path_to_txt path_to_db --need_meta --all_doc
+e.g. python batch_process.py ../data/ policies_all.db --need_meta True --all_doc True
+```
+[--need_meta] is a flag to indicate whether we need to extract metadata, include the extraction texts and corresponding reasons, from the policy documents. The default value is False.
+
+[--all_doc] is a flag to indicate whether we need to process all documents in the directory. The default value is False. If the flag is set to False, the program will only process the files in sample folder. If the flag is set to True, the program will process all files within the data directory.
+
+To get more information for batch_process.py, please run the following command:
+```
+python batch_process.py -h
+
+Extract policy information from text files.
+
+positional arguments:
+  path_to_txt           Path to the text file directory
+  path_to_db            Path to the database file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --need_meta NEED_META
+                        Need metadata (default: False)
+  --all_doc ALL_DOC     Process all documents (default: False)
+```
+
+
+
+
 ## The Link to Metadata 
 The metadata of the features can be found in the following link: [metadata](https://docs.google.com/spreadsheets/d/1BA7K6bCfNOyvs4MbpB6oiBA6FUjiYcIdMXY926yEIw8/edit?usp=sharing)
