@@ -307,6 +307,7 @@ def find_执行过程规定_rule_base(docs,一般政策性内容):
         
     return matched_paragraphs, matched_paragraphs_index
 
+
 def find_设置特定目标_rule_base(docs, 一般政策语言, 执行过程规定):
      # Ignore the warnings
     logging.getLogger().setLevel(logging.ERROR)
@@ -344,6 +345,7 @@ def find_设置特定目标_rule_base(docs, 一般政策语言, 执行过程规�
         matched_paragraphs_index.append((begin_index, end_index))
         
     return matched_paragraphs, matched_paragraphs_index
+
 
 def find_设置特定期限_rule_base(docs):
     # Ignore the warnings

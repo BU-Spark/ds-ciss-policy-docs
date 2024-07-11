@@ -47,7 +47,7 @@ def extract_rule_base(df):
         df.loc[i, '执行过程规定'] = "\n".join(执行过程规定_list)
         df.loc[i, '执行过程规定_提取原因'] = "\n".join(执行过程规定_提取原因_list)
         
-        matched_paragraphs_设置特定目标, matched_paragraphs_index = find_设置特定目标_rule_base(docs, 一般政策语言_list)
+        matched_paragraphs_设置特定目标, matched_paragraphs_index = find_设置特定目标_rule_base(docs, 一般政策语言_list, 执行过程规定_list)
         设置特定目标_list = []
         设置特定目标_提取原因_list = []
         for 设置特定目标, 设置特定目标_提取原因 in matched_paragraphs_设置特定目标:
