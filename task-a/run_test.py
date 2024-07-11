@@ -38,12 +38,13 @@ def extract_rule_base(df):
         df.loc[i, '权宜处理'] = "\n".join(权宜处理_list)
         df.loc[i, '权宜处理_提取原因'] = "\n".join(权宜处理_提取原因_list)
         
-        matched_paragraphs_执行过程规定, matched_paragraphs_index, content, first, last, length = find_执行过程规定_rule_base(docs, 一般政策语言_list)
+        matched_paragraphs_执行过程规定, matched_paragraphs_index = find_执行过程规定_rule_base(docs, 一般政策语言_list)
+        执行过程规定_list = []
         执行过程规定_提取原因_list = []
-        for _, 执行过程规定_提取原因 in matched_paragraphs_执行过程规定:
+        for 执行过程规定, 执行过程规定_提取原因 in matched_paragraphs_执行过程规定:
+            执行过程规定_list += [执行过程规定]
             执行过程规定_提取原因_list += [执行过程规定_提取原因]
-        执行过程规定 = content
-        df.loc[i, '执行过程规定'] = str(执行过程规定)
+        df.loc[i, '执行过程规定'] = "\n".join(执行过程规定_list)
         df.loc[i, '执行过程规定_提取原因'] = "\n".join(执行过程规定_提取原因_list)
         
         matched_paragraphs_设置特定目标, matched_paragraphs_index = find_设置特定目标_rule_base(docs, 一般政策语言_list)
